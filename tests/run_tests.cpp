@@ -234,14 +234,55 @@ int main() {
         SemVer v2("1.0.0-11");
         assert(v1 < v2, "Numeric prerelease comparison (2 < 11)");
     }
+    // --- Leading Zeros in Prerelease Tests (SemVer 2.0.0 Compliance) ---
     {
+        // Numeric identifiers MUST NOT include leading zeros (unless exactly "0")
         SemVer v("1.0.0-01");
-        // Strictly, SemVer 2.0.0 says numeric identifiers MUST NOT include leading zeroes.
-        // My current parse() doesn't split prerelease into tokens to check this.
-        // But comparePrerelease uses isNumeric(part, false) which disallows it.
-        // Let's see if we should make it invalid in parse too.
-        // For now, let's see current behavior.
-        // Actually, I should probably update parse() to be stricter.
+        assert(!v.isValid(), "Numeric prerelease with leading zero (01) is invalid");
+    }
+    {
+        SemVer v("1.0.0-0");
+        assert(v.isValid(), "Numeric prerelease exactly '0' is valid");
+    }
+    {
+        SemVer v("1.0.0-1");
+        assert(v.isValid(), "Numeric prerelease without leading zero (1) is valid");
+    }
+    {
+        SemVer v("1.0.0-01a");
+        assert(v.isValid(), "Alphanumeric prerelease with leading zero (01a) is valid");
+    }
+    {
+        SemVer v("1.0.0-alpha.01");
+        assert(!v.isValid(), "Prerelease segment '01' (numeric with leading zero) is invalid");
+    }
+    {
+        SemVer v("1.0.0-alpha.01a");
+        assert(v.isValid(), "Prerelease segment '01a' (alphanumeric) is valid");
+    }
+    {
+        SemVer v("1.0.0-alpha.0");
+        assert(v.isValid(), "Prerelease segment exactly '0' is valid");
+    }
+    {
+        SemVer v("1.0.0-0.0.0");
+        assert(v.isValid(), "Multiple zero segments in prerelease are valid");
+    }
+    {
+        SemVer v("1.0.0-00");
+        assert(!v.isValid(), "Numeric prerelease '00' (leading zero) is invalid");
+    }
+    {
+        SemVer v("1.0.0-001");
+        assert(!v.isValid(), "Numeric prerelease '001' (leading zeros) is invalid");
+    }
+    {
+        SemVer v("1.0.0-10");
+        assert(v.isValid(), "Numeric prerelease '10' (no leading zero) is valid");
+    }
+    {
+        SemVer v("1.0.0-alpha.001.beta");
+        assert(!v.isValid(), "Prerelease with numeric segment '001' is invalid");
     }
 
     {
