@@ -8,11 +8,12 @@ A lightweight, robust Semantic Versioning (SemVer 2.0.0) parser and checker for 
 
 ## Features
 
+- **Zero-Allocation Architecture**: Core logic uses a single internal buffer and pointer offsets, eliminating memory fragmentation.
 - **Full SemVer 2.0.0 Support**: Handles major, minor, patch, pre-release identifiers, and build metadata.
 - **Comparison Operators**: Easy-to-use operators (`<`, `<=`, `==`, `>=`, `>`, `!=`).
-- **Memory Efficient**: Minimal footprint, suitable for embedded systems.
-- **No External Dependencies**: Built using standard C++ and Arduino types.
-- **Utility Methods**: Includes version coercion and upgrade checking logic.
+- **Memory Efficient**: Minimal footprint, suitable for extremely constrained embedded systems.
+- **Portable**: C++ core with optional Arduino wrappers (can be used in non-Arduino environments).
+- **Security Focused**: Built-in length limits (`MAX_VERSION_LEN`) to prevent buffer overflows.
 
 ## Installation
 
@@ -70,12 +71,32 @@ void checkForUpdate() {
 ## API Reference
 
 ### `SemVer` Class
-- `SemVer(String versionString)`: Parse a version string.
-- `bool isValid()`: Check if the version string was parsed correctly.
-- `String toString()`: Get the string representation.
-- `DiffType diff(const SemVer& other)`: Returns the type of difference (`MAJOR`, `MINOR`, `PATCH`, `PRERELEASE`, `NONE`).
-- `static bool isUpgrade(String base, String next)`: Static helper for upgrade logic.
-- `static SemVer coerce(String versionString)`: Attempt to clean and parse a non-standard version string.
+- `SemVer(const char* versionString)`: Parse a version string.
+- `bool isValid() const`: Check if the version string was parsed correctly.
+- `void toString(char* buffer, size_t len) const`: Fill a buffer with the string representation.
+- `const char* getPrerelease() const`: Get pointer to pre-release string.
+- `const char* getBuild() const`: Get pointer to build metadata string.
+- `SemVer::DiffType diff(const SemVer& other) const`: Returns the type of difference.
+- `void incMajor()`: Increment major version and reset lower components.
+- `void incMinor()`: Increment minor version and reset patch.
+- `void incPatch()`: Increment patch version.
+- `static bool isUpgrade(const char* base, const char* next)`: Static helper for upgrade logic.
+- `static SemVer coerce(const char* versionString)`: Attempt to clean and parse a non-standard version string.
+- `static const size_t MAX_VERSION_LEN`: Maximum allowed length for a version string (64 bytes).
+
+### Arduino Compatibility Wrappers
+If `ARDUINO` is defined, the following methods are also available:
+- `SemVer(const String& versionString)`
+- `String toString() const`
+- `static bool isUpgrade(const String& base, const String& next)`
+- `static SemVer coerce(const String& versionString)`
+
+### `SemVer::DiffType` Enum
+- `NONE`: No difference.
+- `MAJOR`: Major version difference.
+- `MINOR`: Minor version difference.
+- `PATCH`: Patch version difference.
+- `PRERELEASE`: Pre-release identifier difference.
 
 ## Testing
 

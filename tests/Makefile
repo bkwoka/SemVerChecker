@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -I. -Wall -std=c++11
+CXXFLAGS = -I. -Wall -std=c++11 -DARDUINO
 
 all: test
 
