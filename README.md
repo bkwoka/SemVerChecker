@@ -18,26 +18,30 @@ A lightweight, robust Semantic Versioning (SemVer 2.0.0) parser and checker for 
 ## Installation
 
 ### Arduino IDE
+
 1. Download the latest release from the [Releases](https://github.com/bkwoka/SemVerChecker/releases) page.
 2. In the Arduino IDE, go to **Sketch** -> **Include Library** -> **Add .ZIP Library...**
 3. Select the downloaded ZIP file.
 
 ### PlatformIO
+
 Add the following to your `platformio.ini`:
+
 ```ini
 lib_deps =
-    bkwoka/SemVerChecker @ ^1.0.0
+    bkwoka/SemVerChecker @ ^1.1.0
 ```
 
 ## Usage
 
 ### Basic Comparison
+
 ```cpp
 #include <SemVerChecker.h>
 
 void setup() {
   Serial.begin(115200);
-  
+
   SemVer currentVersion("1.2.3-beta.1");
   SemVer minVersion("1.0.0");
 
@@ -47,7 +51,7 @@ void setup() {
 
   SemVer v1("1.0.0-rc.1");
   SemVer v2("1.0.0");
-  
+
   if (v1 < v2) {
     Serial.println("Pre-release is older than stable release.");
   }
@@ -55,6 +59,7 @@ void setup() {
 ```
 
 ### Upgrade Checking
+
 ```cpp
 #include <SemVerChecker.h>
 
@@ -71,6 +76,7 @@ void checkForUpdate() {
 ## API Reference
 
 ### `SemVer` Class
+
 - `SemVer(const char* versionString)`: Parse a version string.
 - `bool isValid() const`: Check if the version string was parsed correctly.
 - `void toString(char* buffer, size_t len) const`: Fill a buffer with the string representation.
@@ -85,13 +91,16 @@ void checkForUpdate() {
 - `static const size_t MAX_VERSION_LEN`: Maximum allowed length for a version string (64 bytes).
 
 ### Arduino Compatibility Wrappers
+
 If `ARDUINO` is defined, the following methods are also available:
+
 - `SemVer(const String& versionString)`
 - `String toString() const`
 - `static bool isUpgrade(const String& base, const String& next)`
 - `static SemVer coerce(const String& versionString)`
 
 ### `SemVer::DiffType` Enum
+
 - `NONE`: No difference.
 - `MAJOR`: Major version difference.
 - `MINOR`: Minor version difference.
@@ -101,13 +110,17 @@ If `ARDUINO` is defined, the following methods are also available:
 ## Testing
 
 ### Native Tests (Linux/macOS)
+
 The project includes a comprehensive suite of native unit tests that can be run without an Arduino board.
+
 ```bash
 make -C tests
 ```
 
 ### Arduino Tests
+
 You can also run the same tests on an Arduino board or ESP8266/ESP32 using the `UnitTests` example:
+
 1. Open `examples/UnitTests/UnitTests.ino` in the Arduino IDE.
 2. Upload to your board and open the Serial Monitor (115200 baud).
 
