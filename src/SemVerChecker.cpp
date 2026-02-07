@@ -1,286 +1,321 @@
 #include "SemVerChecker.h"
 
-SemVer::SemVer() : major(0), minor(0), patch(0), prerelease(""), build(""), valid(false) {}
+// Internal Utils Implementation
+size_t SemVer::custom_strlen(const char* s) {
+    if (!s) return 0;
+    size_t len = 0;
+    while (s[len]) len++;
+    return len;
+}
 
-SemVer::SemVer(const String& versionString) : major(0), minor(0), patch(0), prerelease(""), build(""), valid(false) {
+int SemVer::custom_strcmp(const char* s1, const char* s2) {
+    if (!s1 || !s2) return (s1 == s2) ? 0 : (s1 ? 1 : -1);
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+}
+
+char* SemVer::custom_strncpy(char* dest, const char* src, size_t n) {
+    size_t i;
+    for (i = 0; i < n && src[i] != '\0'; i++)
+        dest[i] = src[i];
+    for (; i < n; i++)
+        dest[i] = '\0';
+    return dest;
+}
+
+int SemVer::findChar(const char* s, char c, int start) {
+    if (!s) return -1;
+    for (int i = start; s[i] != '\0'; i++) {
+        if (s[i] == c) return i;
+    }
+    return -1;
+}
+
+// SemVer Implementation
+SemVer::SemVer() : major(0), minor(0), patch(0), _preOffset(0), _buildOffset(0), _valid(false) {
+    _buffer[0] = '\0';
+}
+
+SemVer::SemVer(const char* versionString) : major(0), minor(0), patch(0), _preOffset(0), _buildOffset(0), _valid(false) {
     parse(versionString);
 }
 
-SemVer::SemVer(const char* versionString) : major(0), minor(0), patch(0), prerelease(""), build(""), valid(false) {
-    parse(String(versionString));
+#ifdef ARDUINO
+SemVer::SemVer(const String& versionString) : major(0), minor(0), patch(0), _preOffset(0), _buildOffset(0), _valid(false) {
+    parse(versionString.c_str());
 }
+#endif
 
-void SemVer::parse(const String& inputRaw) {
-    // 1. Basic Guards
-    if (!basicGuards(inputRaw)) {
-        valid = false;
+void SemVer::parse(const char* input) {
+    if (!basicGuards(input)) {
+        _valid = false;
         return;
     }
 
-    // 2. Split Main Parts
+    // Copy to internal buffer for in-place manipulation
+    custom_strncpy(_buffer, input, MAX_VERSION_LEN);
+    _buffer[MAX_VERSION_LEN] = '\0';
+
     int dot1, dot2, hyphenIndex, plusIndex;
-    if (!splitMainParts(inputRaw, dot1, dot2, hyphenIndex, plusIndex)) {
-        valid = false;
+    if (!splitMainParts(_buffer, dot1, dot2, hyphenIndex, plusIndex)) {
+        _valid = false;
         return;
     }
 
-    // Determine boundaries based on separators
-    int endOfPatch = (hyphenIndex != -1) ? hyphenIndex : ((plusIndex != -1) ? plusIndex : inputRaw.length());
+    int endOfPatch = (hyphenIndex != -1) ? hyphenIndex : ((plusIndex != -1) ? plusIndex : (int)custom_strlen(_buffer));
     int startOfPre = (hyphenIndex != -1) ? hyphenIndex + 1 : -1;
-    int endOfPre   = (plusIndex != -1) ? plusIndex : inputRaw.length();
+    int endOfPre   = (plusIndex != -1) ? plusIndex : (int)custom_strlen(_buffer);
     int startOfBuild = (plusIndex != -1) ? plusIndex + 1 : -1;
-    int endOfBuild = inputRaw.length();
+    int endOfBuild = (int)custom_strlen(_buffer);
 
-    // 3. Validate Core Structure (Regex: 0|[1-9]\d*)
-    if (!validateCore(inputRaw, dot1, dot2, endOfPatch)) {
-        valid = false;
+    if (!validateCore(_buffer, dot1, dot2, endOfPatch)) {
+        _valid = false;
         return;
     }
 
-    // 4. Validate Prerelease (Regex rules for identifiers)
     if (startOfPre != -1) {
-        if (!validatePrerelease(inputRaw, startOfPre, endOfPre)) {
-            valid = false;
+        if (!validatePrerelease(_buffer, startOfPre, endOfPre)) {
+            _valid = false;
             return;
         }
     }
 
-    // 5. Validate Build Metadata (Regex rules)
     if (startOfBuild != -1) {
-        if (!validateBuild(inputRaw, startOfBuild, endOfBuild)) {
-            valid = false;
+        if (!validateBuild(_buffer, startOfBuild, endOfBuild)) {
+            _valid = false;
             return;
         }
     }
 
-    // 6. Parse Core Values (Detect Overflow)
     uint32_t tmpMajor, tmpMinor, tmpPatch;
-    if (!parseCore(inputRaw, dot1, dot2, endOfPatch, tmpMajor, tmpMinor, tmpPatch)) {
-        valid = false;
+    if (!parseCore(_buffer, dot1, dot2, endOfPatch, tmpMajor, tmpMinor, tmpPatch)) {
+        _valid = false;
         return;
     }
 
-    // 7. Commit
-    // Extract substrings only now that validity is guaranteed
-    String tmpPreStr = (startOfPre != -1) ? inputRaw.substring(startOfPre, endOfPre) : "";
-    String tmpBuildStr = (startOfBuild != -1) ? inputRaw.substring(startOfBuild, endOfBuild) : "";
-    
-    commit(tmpMajor, tmpMinor, tmpPatch, tmpPreStr, tmpBuildStr);
+    // Commit values
+    major = tmpMajor;
+    minor = tmpMinor;
+    patch = tmpPatch;
+    _preOffset = (startOfPre != -1) ? (uint16_t)startOfPre : 0;
+    _buildOffset = (startOfBuild != -1) ? (uint16_t)startOfBuild : 0;
+    _valid = true;
+
+    // In-place terminate segments with \0 to allow direct pointer use
+    if (hyphenIndex != -1) _buffer[hyphenIndex] = '\0';
+    if (plusIndex != -1) _buffer[plusIndex] = '\0';
 }
 
-bool SemVer::basicGuards(const String& input) const {
-    if (input.length() == 0 || input.length() > MAX_VERSION_LEN) return false;
+bool SemVer::basicGuards(const char* input) const {
+    if (!input || input[0] == '\0') return false;
+    size_t len = custom_strlen(input);
+    if (len > MAX_VERSION_LEN) return false;
     return true;
 }
 
-bool SemVer::splitMainParts(const String& input, int& dot1, int& dot2, int& hyphen, int& plus) const {
-    dot1 = input.indexOf('.');
+bool SemVer::splitMainParts(const char* input, int& dot1, int& dot2, int& hyphen, int& plus) const {
+    dot1 = findChar(input, '.');
     if (dot1 == -1) return false;
 
-    dot2 = input.indexOf('.', dot1 + 1);
+    dot2 = findChar(input, '.', dot1 + 1);
     if (dot2 == -1) return false;
 
-    // According to regex: ^... core ... (?:-(...))? (?:\+(...))? $
-    // The hyphen for prerelease must come after the patch number.
-    // However, hyphens can exist IN prerelease or build.
-    // Logic: Look for first + (build). Prerelease is between patch and build.
+    plus = findChar(input, '+');
     
-    plus = input.indexOf('+');
-    
-    // Search for hyphen specifically after the patch dot.
-    // It must be the first separator after dot2.
     int scanStart = dot2 + 1;
     hyphen = -1;
     
-    for (unsigned int i = scanStart; i < input.length(); i++) {
-        char c = input.charAt(i);
-        if (c == '+') {
-            // Found build start before any hyphen -> no prerelease
-            break; 
-        }
+    for (int i = scanStart; input[i] != '\0'; i++) {
+        char c = input[i];
+        if (c == '+') break; 
         if (c == '-') {
             hyphen = i;
             break;
         }
-        // If we hit a non-digit before a separator, it might be invalid core, 
-        // but we handle validation later. However, structure dictates:
-        // Major.Minor.Patch[-Pre][+Build]
-        // Patch must be digits. So if we see non-digit that isn't + or -, it's invalid unless it's part of Pre/Build later.
-        // Actually, strictly finding the delimiters:
-        if (!isDigit(c)) {
-             // If we find a non-digit that is NOT + or -, and we haven't found hyphen yet,
-             // then this version string is structurally invalid for the "Patch" segment
-             // UNLESS it marks the start of something. But standard says Patch is Digits only.
-             // So any non-digit terminates Patch.
-             // If it's not - or +, it's an error in strict mode.
-             return false;
-        }
+        if (c < '0' || c > '9') return false;
     }
     
-    // Sanity check indices
-    if (hyphen != -1 && plus != -1 && hyphen > plus) return false; // - inside build is ok, but we looked from start
-    
-    // Empty segments check (e.g. "1..2")
+    if (hyphen != -1 && plus != -1 && hyphen > plus) return false;
     if (dot1 == 0 || (dot2 - dot1) <= 1) return false;
     
     return true;
 }
 
-bool SemVer::validateCore(const String& input, int dot1, int dot2, int endOfPatch) const {
-    // Check Major
+bool SemVer::validateCore(const char* input, int dot1, int dot2, int endOfPatch) const {
     if (!checkSegment(input, 0, dot1, false)) return false;
-    // Check Minor
     if (!checkSegment(input, dot1 + 1, dot2, false)) return false;
-    // Check Patch
     if (!checkSegment(input, dot2 + 1, endOfPatch, false)) return false;
     return true;
 }
 
-bool SemVer::validatePrerelease(const String& input, int start, int end) const {
-    if (start >= end) return false; // Empty prerelease specified (e.g. "1.2.3-")
+bool SemVer::validatePrerelease(const char* input, int start, int end) const {
+    if (start >= end) return false;
 
     int current = start;
     while (current < end) {
-        int nextDot = input.indexOf('.', current);
+        int nextDot = findChar(input, '.', current);
         if (nextDot == -1 || nextDot > end) nextDot = end;
         
-        // Segment: current -> nextDot
-        if (nextDot == current) return false; // Empty segment (..) or leading dot
-
-        // Check rules for Prerelease Identifier
-        // Regex: (?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)
+        if (nextDot == current) return false;
         if (!checkSegment(input, current, nextDot, true)) return false;
-
-        if (nextDot == end) break; // Finished
-        if (nextDot == end - 1) return false; // Trailing dot (e.g. "alpha.")
-        
+        if (nextDot == end) break;
+        if (nextDot == end - 1) return false; 
         current = nextDot + 1;
     }
     return true;
 }
 
-bool SemVer::validateBuild(const String& input, int start, int end) const {
-    if (start >= end) return false; // Empty build specified
+bool SemVer::validateBuild(const char* input, int start, int end) const {
+    if (start >= end) return false;
 
     int current = start;
     while (current < end) {
-        int nextDot = input.indexOf('.', current);
+        int nextDot = findChar(input, '.', current);
         if (nextDot == -1 || nextDot > end) nextDot = end;
 
-        if (nextDot == current) return false; // Empty segment
+        if (nextDot == current) return false;
 
-        // Build identifiers: [0-9A-Za-z-]+ (Leading zeros allowed)
         for (int i = current; i < nextDot; i++) {
-            char c = input.charAt(i);
-            if (!isDigit(c) && !isAlpha(c) && c != '-') return false;
+            char c = input[i];
+            bool isAlpha = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+            bool isDigit = (c >= '0' && c <= '9');
+            if (!isDigit && !isAlpha && c != '-') return false;
         }
 
         if (nextDot == end) break;
-        if (nextDot == end - 1) return false; // Trailing dot
+        if (nextDot == end - 1) return false;
 
         current = nextDot + 1;
     }
     return true;
 }
 
-bool SemVer::parseCore(const String& input, int dot1, int dot2, int endOfPatch, uint32_t& maj, uint32_t& min, uint32_t& pat) const {
+bool SemVer::parseCore(const char* input, int dot1, int dot2, int endOfPatch, uint32_t& maj, uint32_t& min, uint32_t& pat) const {
     if (!parseUint32(input, 0, dot1, maj)) return false;
     if (!parseUint32(input, dot1 + 1, dot2, min)) return false;
     if (!parseUint32(input, dot2 + 1, endOfPatch, pat)) return false;
     return true;
 }
 
-void SemVer::commit(uint32_t maj, uint32_t min, uint32_t pat, const String& pre, const String& bld) {
-    this->major = maj;
-    this->minor = min;
-    this->patch = pat;
-    this->prerelease = pre;
-    this->build = bld;
-    this->valid = true;
-}
-
-// Helpers
-
-// Helper to validate a segment based on SemVer rules
-// isPrerelease = false -> Core Version Rules (Numeric only, no leading zero)
-// isPrerelease = true  -> Prerelease Rules (Alphanum, numeric-only cannot have leading zero)
-bool SemVer::checkSegment(const String& s, int start, int end, bool isPrerelease) const {
+bool SemVer::checkSegment(const char* s, int start, int end, bool isPrerelease) const {
     if (start >= end) return false;
     
     bool isAllNumeric = true;
     for (int i = start; i < end; i++) {
-        char c = s.charAt(i);
-        if (!isDigit(c)) {
+        char c = s[i];
+        bool isDigit = (c >= '0' && c <= '9');
+        if (!isDigit) {
             isAllNumeric = false;
-            if (!isPrerelease) return false; // Core must be digits only
-            // For prerelease, check allowed chars [0-9A-Za-z-]
-            if (!isAlpha(c) && c != '-') return false;
+            if (!isPrerelease) return false;
+            bool isAlpha = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+            if (!isAlpha && c != '-') return false;
         }
     }
 
-    // Leading Zero Rule
-    // Applies to Core (always numeric) AND Prerelease (if identifier is numeric)
-    // Rule: "0" is allowed. "01" is not.
     if (isAllNumeric) {
-        if ((end - start) > 1 && s.charAt(start) == '0') {
-            return false;
-        }
+        if ((end - start) > 1 && s[start] == '0') return false;
     }
-
     return true;
 }
 
-bool SemVer::parseUint32(const String& s, int start, int end, uint32_t& out) const {
-    // We assume validation passed, so format is correct. We check for overflow.
-    // Avoid String allocation by manual parsing
+bool SemVer::parseUint32(const char* s, int start, int end, uint32_t& out) const {
     uint32_t val = 0;
-    uint32_t cutoff = 429496729; // UINT32_MAX / 10
-    uint32_t cutlim = 5;         // UINT32_MAX % 10
+    uint32_t cutoff = 429496729;
+    uint32_t cutlim = 5;
 
     for (int i = start; i < end; i++) {
-        char c = s.charAt(i);
-        uint32_t digit = c - '0';
-        
-        if (val > cutoff || (val == cutoff && digit > cutlim)) {
-            return false; // Overflow
-        }
+        uint32_t digit = s[i] - '0';
+        if (val > cutoff || (val == cutoff && digit > cutlim)) return false;
         val = val * 10 + digit;
     }
     out = val;
     return true;
 }
 
-// Helper needed for isNumeric check within legacy/other parts of code if reused
-// Refactored to use index-based helper
-bool SemVer::isNumeric(const String& s, int start, int end) const {
+bool SemVer::isNumeric(const char* s, int start, int end) const {
     if (start >= end) return false;
     for (int i = start; i < end; i++) {
-        if (!isDigit(s.charAt(i))) return false;
+        if (s[i] < '0' || s[i] > '9') return false;
     }
     return true;
 }
 
-// Keeping the member function for compatibility if header defines it, 
-// but mapping to new logic
-bool SemVer::isNumeric(const String& s) const {
-    return isNumeric(s, 0, s.length());
-}
-
 bool SemVer::isValid() const {
-    return valid;
+    return _valid;
 }
 
-String SemVer::toString() const {
-    if (!valid) return "invalid";
-    String res = String(major) + "." + String(minor) + "." + String(patch);
-    if (prerelease.length() > 0) res += "-" + prerelease;
-    if (build.length() > 0) res += "+" + build;
-    return res;
+const char* SemVer::getPrerelease() const {
+    return _preOffset ? &_buffer[_preOffset] : "";
 }
+
+const char* SemVer::getBuild() const {
+    return _buildOffset ? &_buffer[_buildOffset] : "";
+}
+
+void SemVer::toString(char* buffer, size_t len) const {
+    if (!buffer || len == 0) return;
+    if (!_valid) {
+        custom_strncpy(buffer, "invalid", len);
+        buffer[len - 1] = '\0';
+        return;
+    }
+
+    // Use a simple manual sprintf-like logic to avoid stdio dependency
+    auto writeNum = [](char* b, size_t& pos, size_t l, uint32_t n) {
+        if (pos >= l) return;
+        if (n == 0) {
+            if (pos < l - 1) b[pos++] = '0';
+            return;
+        }
+        char temp[11];
+        int i = 0;
+        while (n > 0) {
+            temp[i++] = (n % 10) + '0';
+            n /= 10;
+        }
+        while (i > 0 && pos < l - 1) {
+            b[pos++] = temp[--i];
+        }
+    };
+
+    size_t pos = 0;
+    writeNum(buffer, pos, len, major);
+    if (pos < len - 1) buffer[pos++] = '.';
+    writeNum(buffer, pos, len, minor);
+    if (pos < len - 1) buffer[pos++] = '.';
+    writeNum(buffer, pos, len, patch);
+
+    const char* pre = getPrerelease();
+    if (pre[0] != '\0' && pos < len - 1) {
+        buffer[pos++] = '-';
+        while (*pre && pos < len - 1) buffer[pos++] = *pre++;
+    }
+
+    const char* bld = getBuild();
+    if (bld[0] != '\0' && pos < len - 1) {
+        buffer[pos++] = '+';
+        while (*bld && pos < len - 1) buffer[pos++] = *bld++;
+    }
+
+    if (pos < len) buffer[pos] = '\0';
+    else buffer[len - 1] = '\0';
+}
+
+#ifdef ARDUINO
+String SemVer::toString() const {
+    char buf[MAX_VERSION_LEN + 1];
+    toString(buf, sizeof(buf));
+    return String(buf);
+}
+#endif
 
 bool SemVer::operator==(const SemVer& other) const {
-    if (!valid || !other.valid) return false;
-    return major == other.major && minor == other.minor && patch == other.patch && prerelease == other.prerelease;
+    if (!_valid || !other._valid) return false;
+    return major == other.major && minor == other.minor && patch == other.patch && 
+           custom_strcmp(getPrerelease(), other.getPrerelease()) == 0;
 }
 
 bool SemVer::operator!=(const SemVer& other) const {
@@ -288,17 +323,21 @@ bool SemVer::operator!=(const SemVer& other) const {
 }
 
 bool SemVer::operator<(const SemVer& other) const {
-    if (!valid || !other.valid) return false;
+    if (!_valid || !other._valid) return false;
     if (major != other.major) return major < other.major;
     if (minor != other.minor) return minor < other.minor;
     if (patch != other.patch) return patch < other.patch;
     
-    // Release version has higher precedence than pre-release
-    if (prerelease.length() > 0 && other.prerelease.length() == 0) return true;
-    if (prerelease.length() == 0 && other.prerelease.length() > 0) return false;
-    if (prerelease.length() == 0 && other.prerelease.length() == 0) return false;
+    const char* preA = getPrerelease();
+    const char* preB = other.getPrerelease();
+    bool hasPreA = (preA[0] != '\0');
+    bool hasPreB = (preB[0] != '\0');
+
+    if (hasPreA && !hasPreB) return true;
+    if (!hasPreA && hasPreB) return false;
+    if (!hasPreA && !hasPreB) return false;
     
-    return comparePrerelease(prerelease, other.prerelease) < 0;
+    return comparePrerelease(preA, preB) < 0;
 }
 
 bool SemVer::operator>(const SemVer& other) const {
@@ -313,143 +352,147 @@ bool SemVer::operator>=(const SemVer& other) const {
     return !(*this < other);
 }
 
-bool SemVer::isUpgrade(const String& baseVersion, const String& newVersion) {
+bool SemVer::isUpgrade(const char* baseVersion, const char* newVersion) {
     SemVer v1(baseVersion);
     SemVer v2(newVersion);
-    if (!v1.valid || !v2.valid) return false;
-    return v2 > v1;
+    return v1._valid && v2._valid && v2 > v1;
 }
 
-SemVer SemVer::coerce(const String& versionString) {
-    // Simple coercion: find the first digit and try to parse from there
+#ifdef ARDUINO
+bool SemVer::isUpgrade(const String& baseVersion, const String& newVersion) {
+    return isUpgrade(baseVersion.c_str(), newVersion.c_str());
+}
+#endif
+
+SemVer SemVer::coerce(const char* versionString) {
+    if (!versionString) return SemVer();
     int start = -1;
-    for (unsigned int i = 0; i < versionString.length(); i++) {
-        if (isDigit(versionString.charAt(i))) {
+    for (int i = 0; versionString[i] != '\0'; i++) {
+        if (versionString[i] >= '0' && versionString[i] <= '9') {
             start = i;
             break;
         }
     }
     if (start == -1) return SemVer();
 
-    String s = versionString.substring(start);
-    // Try full parse first
+    const char* s = &versionString[start];
     SemVer v(s);
-    if (v.valid) return v;
+    if (v._valid) return v;
 
-    // Try partial: X.Y or X
-    int dot1 = s.indexOf('.');
+    // Partial parse X.Y or X
+    int dot1 = findChar(s, '.');
     if (dot1 == -1) {
-        // Just a major version?
-        // Check if it's purely numeric
         int end = 0;
-        while(end < (int)s.length() && isDigit(s.charAt(end))) end++;
+        while(s[end] >= '0' && s[end] <= '9') end++;
         if (end == 0) return SemVer();
         SemVer res;
         if (res.parseUint32(s, 0, end, res.major)) {
-            res.minor = 0;
-            res.patch = 0;
-            res.valid = true;
+            res.minor = 0; res.patch = 0; res._valid = true;
             return res;
         }
         return SemVer();
     }
 
-    int dot2 = s.indexOf('.', dot1 + 1);
+    int dot2 = findChar(s, '.', dot1 + 1);
     if (dot2 == -1) {
-        // X.Y?
         int end = dot1 + 1;
-        while(end < (int)s.length() && isDigit(s.charAt(end))) end++;
+        while(s[end] >= '0' && s[end] <= '9') end++;
         SemVer res;
         if (res.parseUint32(s, 0, dot1, res.major) && res.parseUint32(s, dot1+1, end, res.minor)) {
-            res.patch = 0;
-            res.valid = true;
-            
-            // Check for trailing prerelease/build
-            int hyphen = s.indexOf('-', end);
-            int plus = s.indexOf('+', end);
-            if (hyphen != -1 || plus != -1) {
-                // Too complex for simple coerce if not standard
-                // But let's try to see if we can just re-parse it as X.Y.0...
-                String full = s.substring(0, dot1) + "." + s.substring(dot1 + 1, end) + ".0" + s.substring(end);
-                return SemVer(full);
+            res.patch = 0; res._valid = true;
+            int nextIdx = end;
+            if (s[nextIdx] == '-' || s[nextIdx] == '+') {
+                char tmp[MAX_VERSION_LEN+1];
+                size_t pos = 0;
+                for(int i=0; i<dot1; i++) tmp[pos++] = s[i];
+                tmp[pos++] = '.';
+                for(int i=dot1+1; i<end; i++) tmp[pos++] = s[i];
+                tmp[pos++] = '.'; tmp[pos++] = '0';
+                while(s[nextIdx] != '\0' && pos < MAX_VERSION_LEN) tmp[pos++] = s[nextIdx++];
+                tmp[pos] = '\0';
+                return SemVer(tmp);
             }
             return res;
         }
     }
 
-    return SemVer(); // Fallback
+    return SemVer();
 }
 
+#ifdef ARDUINO
+SemVer SemVer::coerce(const String& versionString) {
+    return coerce(versionString.c_str());
+}
+#endif
+
 SemVer::DiffType SemVer::diff(const SemVer& other) const {
-    if (!valid || !other.valid) return NONE;
+    if (!_valid || !other._valid) return NONE;
     if (major != other.major) return MAJOR;
     if (minor != other.minor) return MINOR;
     if (patch != other.patch) return PATCH;
-    if (prerelease != other.prerelease) return PRERELEASE;
+    if (custom_strcmp(getPrerelease(), other.getPrerelease()) != 0) return PRERELEASE;
     return NONE;
 }
 
 void SemVer::incMajor() {
-    major++;
-    minor = 0;
-    patch = 0;
-    prerelease = "";
-    build = "";
+    major++; minor = 0; patch = 0;
+    _preOffset = 0; _buildOffset = 0;
+    _buffer[0] = '\0';
 }
 
 void SemVer::incMinor() {
-    minor++;
-    patch = 0;
-    prerelease = "";
-    build = "";
+    minor++; patch = 0;
+    _preOffset = 0; _buildOffset = 0;
+    _buffer[0] = '\0';
 }
 
 void SemVer::incPatch() {
     patch++;
-    prerelease = "";
-    build = "";
+    _preOffset = 0; _buildOffset = 0;
+    _buffer[0] = '\0';
 }
 
-// IMPORTANT: Updated comparePrerelease to use index-based substrings or correct logic
-int SemVer::comparePrerelease(const String& a, const String& b) const {
-    if (a == b) return 0;
+int SemVer::comparePrerelease(const char* a, const char* b) const {
+    if (custom_strcmp(a, b) == 0) return 0;
     
     int startA = 0, startB = 0;
-    int lenA = a.length();
-    int lenB = b.length();
+    size_t lenA = custom_strlen(a);
+    size_t lenB = custom_strlen(b);
     
-    while (startA < lenA || startB < lenB) {
-        int endA = a.indexOf('.', startA);
-        int endB = b.indexOf('.', startB);
-        if (endA == -1) endA = lenA;
-        if (endB == -1) endB = lenB;
+    while (startA < (int)lenA || startB < (int)lenB) {
+        int endA = findChar(a, '.', startA);
+        int endB = findChar(b, '.', startB);
+        if (endA == -1) endA = (int)lenA;
+        if (endB == -1) endB = (int)lenB;
 
-        String partA = (startA < lenA) ? a.substring(startA, endA) : "";
-        String partB = (startB < lenB) ? b.substring(startB, endB) : "";
+        if (startA >= (int)lenA && startB < (int)lenB) return -1;
+        if (startA < (int)lenA && startB >= (int)lenB) return 1;
 
-        if (partA.length() == 0 && partB.length() > 0) return -1; 
-        if (partA.length() > 0 && partB.length() == 0) return 1;
+        int segLenA = endA - startA;
+        int segLenB = endB - startB;
 
-        bool aNum = isNumeric(partA, 0, partA.length());
-        bool bNum = isNumeric(partB, 0, partB.length());
+        bool aNum = isNumeric(a, startA, endA);
+        bool bNum = isNumeric(b, startB, endB);
 
         if (aNum && bNum) {
-            if (partA.length() != partB.length()) {
-                return (partA.length() < partB.length()) ? -1 : 1;
+            if (segLenA != segLenB) return (segLenA < segLenB) ? -1 : 1;
+            for (int i = 0; i < segLenA; i++) {
+                if (a[startA + i] != b[startB + i]) return (a[startA + i] < b[startB + i]) ? -1 : 1;
             }
-            int cmp = partA.compareTo(partB);
-            if (cmp != 0) return cmp;
         } else if (aNum && !bNum) {
             return -1; 
         } else if (!aNum && bNum) {
             return 1; 
         } else {
-            int cmp = partA.compareTo(partB);
-            if (cmp != 0) return cmp;
+            int minLen = (segLenA < segLenB) ? segLenA : segLenB;
+            for (int i = 0; i < minLen; i++) {
+                if (a[startA + i] != b[startB + i]) return (a[startA + i] < b[startB + i]) ? -1 : 1;
+            }
+            if (segLenA != segLenB) return (segLenA < segLenB) ? -1 : 1;
         }
 
-        startA = endA + 1;
-        startB = endB + 1;
+        startA = (endA < (int)lenA) ? endA + 1 : (int)lenA;
+        startB = (endB < (int)lenB) ? endB + 1 : (int)lenB;
     }
     return 0;
 }

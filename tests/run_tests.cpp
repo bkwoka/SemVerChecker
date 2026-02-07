@@ -55,8 +55,8 @@ int main() {
         assertEqual(v.major, 1, "Parse 1.2.3 major");
         assertEqual(v.minor, 2, "Parse 1.2.3 minor");
         assertEqual(v.patch, 3, "Parse 1.2.3 patch");
-        assertString(v.prerelease, "", "Parse 1.2.3 prerelease empty");
-        assertString(v.build, "", "Parse 1.2.3 build empty");
+        assertString(v.getPrerelease(), "", "Parse 1.2.3 prerelease empty");
+        assertString(v.getBuild(), "", "Parse 1.2.3 build empty");
     }
     {
         SemVer v("10.20.30-alpha.1+build.123");
@@ -64,8 +64,8 @@ int main() {
         assertEqual(v.major, 10, "Complex major");
         assertEqual(v.minor, 20, "Complex minor");
         assertEqual(v.patch, 30, "Complex patch");
-        assertString(v.prerelease, "alpha.1", "Complex prerelease");
-        assertString(v.build, "build.123", "Complex build");
+        assertString(v.getPrerelease(), "alpha.1", "Complex prerelease");
+        assertString(v.getBuild(), "build.123", "Complex build");
     }
     {
         SemVer v("invalid");
@@ -285,7 +285,7 @@ int main() {
     {
         SemVer v1("1.2.3-alpha-beta"); // Identifiers with dashes
         assert(v1.isValid(), "Dashes in prerelease are valid");
-        assertString(v1.prerelease, "alpha-beta", "Prerelease identifies correctly with dashes");
+        assertString(v1.getPrerelease(), "alpha-beta", "Prerelease identifies correctly with dashes");
     }
     {
         SemVer v1("1.2.3+build-metadata");
@@ -304,14 +304,14 @@ int main() {
         assertEqual(v.major, 1, "Complex coerce major");
         assertEqual(v.minor, 2, "Complex coerce minor");
         assertEqual(v.patch, 0, "Complex coerce patch");
-        assertString(v.prerelease, "alpha", "Complex coerce prerelease");
-        assertString(v.build, "build", "Complex coerce build");
+        assertString(v.getPrerelease(), "alpha", "Complex coerce prerelease");
+        assertString(v.getBuild(), "build", "Complex coerce build");
     }
     {
         SemVer v = SemVer::coerce("2.1+onlybuild");
         assert(v.isValid(), "Coerce 2.1+onlybuild");
         assertEqual(v.patch, 0, "Coerce 2.1+onlybuild patch is 0");
-        assertString(v.build, "onlybuild", "Coerce 2.1+onlybuild build verified");
+        assertString(v.getBuild(), "onlybuild", "Coerce 2.1+onlybuild build verified");
     }
 
     // --- Exhaustive Compliance Tests ---
