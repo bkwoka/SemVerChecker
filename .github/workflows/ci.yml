@@ -33,3 +33,15 @@ jobs:
 
       - name: Compile UpgradeCheck
         run: arduino-cli compile --fqbn arduino:avr:uno examples/UpgradeCheck/UpgradeCheck.ino --libraries .
+
+  lint:
+    name: Lint Library
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Arduino Lint
+        uses: arduino/arduino-lint-action@v1
+        with:
+          library-manager: update
+          compliance: strict
