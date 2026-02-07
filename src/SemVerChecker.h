@@ -62,6 +62,7 @@ private:
 
     // Helpers
     int comparePrerelease(const String& a, const String& b) const;
+    bool isNumeric(const String& s) const;
     bool isNumeric(const String& s, int start, int end) const;
     bool checkSegment(const String& s, int start, int end, bool isPrerelease) const;
     bool parseUint32(const String& s, int start, int end, uint32_t& out) const;

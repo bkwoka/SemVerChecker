@@ -1,6 +1,14 @@
 #include "SemVerChecker.h"
 
-// ... (Constructors remain unchanged) ...
+SemVer::SemVer() : major(0), minor(0), patch(0), prerelease(""), build(""), valid(false) {}
+
+SemVer::SemVer(const String& versionString) : major(0), minor(0), patch(0), prerelease(""), build(""), valid(false) {
+    parse(versionString);
+}
+
+SemVer::SemVer(const char* versionString) : major(0), minor(0), patch(0), prerelease(""), build(""), valid(false) {
+    parse(String(versionString));
+}
 
 void SemVer::parse(const String& inputRaw) {
     // 1. Basic Guards
@@ -137,12 +145,15 @@ bool SemVer::validatePrerelease(const String& input, int start, int end) const {
         if (nextDot == -1 || nextDot > end) nextDot = end;
         
         // Segment: current -> nextDot
-        if (nextDot == current) return false; // Empty segment (..) or trailing/leading dot
+        if (nextDot == current) return false; // Empty segment (..) or leading dot
 
         // Check rules for Prerelease Identifier
         // Regex: (?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)
         if (!checkSegment(input, current, nextDot, true)) return false;
 
+        if (nextDot == end) break; // Finished
+        if (nextDot == end - 1) return false; // Trailing dot (e.g. "alpha.")
+        
         current = nextDot + 1;
     }
     return true;
@@ -163,6 +174,9 @@ bool SemVer::validateBuild(const String& input, int start, int end) const {
             char c = input.charAt(i);
             if (!isDigit(c) && !isAlpha(c) && c != '-') return false;
         }
+
+        if (nextDot == end) break;
+        if (nextDot == end - 1) return false; // Trailing dot
 
         current = nextDot + 1;
     }
@@ -252,7 +266,149 @@ bool SemVer::isNumeric(const String& s) const {
     return isNumeric(s, 0, s.length());
 }
 
-// ... (Rest of SemVerChecker.cpp: toString, operators, coerce, etc. remain mostly unchanged) ...
+bool SemVer::isValid() const {
+    return valid;
+}
+
+String SemVer::toString() const {
+    if (!valid) return "invalid";
+    String res = String(major) + "." + String(minor) + "." + String(patch);
+    if (prerelease.length() > 0) res += "-" + prerelease;
+    if (build.length() > 0) res += "+" + build;
+    return res;
+}
+
+bool SemVer::operator==(const SemVer& other) const {
+    if (!valid || !other.valid) return false;
+    return major == other.major && minor == other.minor && patch == other.patch && prerelease == other.prerelease;
+}
+
+bool SemVer::operator!=(const SemVer& other) const {
+    return !(*this == other);
+}
+
+bool SemVer::operator<(const SemVer& other) const {
+    if (!valid || !other.valid) return false;
+    if (major != other.major) return major < other.major;
+    if (minor != other.minor) return minor < other.minor;
+    if (patch != other.patch) return patch < other.patch;
+    
+    // Release version has higher precedence than pre-release
+    if (prerelease.length() > 0 && other.prerelease.length() == 0) return true;
+    if (prerelease.length() == 0 && other.prerelease.length() > 0) return false;
+    if (prerelease.length() == 0 && other.prerelease.length() == 0) return false;
+    
+    return comparePrerelease(prerelease, other.prerelease) < 0;
+}
+
+bool SemVer::operator>(const SemVer& other) const {
+    return other < *this;
+}
+
+bool SemVer::operator<=(const SemVer& other) const {
+    return !(*this > other);
+}
+
+bool SemVer::operator>=(const SemVer& other) const {
+    return !(*this < other);
+}
+
+bool SemVer::isUpgrade(const String& baseVersion, const String& newVersion) {
+    SemVer v1(baseVersion);
+    SemVer v2(newVersion);
+    if (!v1.valid || !v2.valid) return false;
+    return v2 > v1;
+}
+
+SemVer SemVer::coerce(const String& versionString) {
+    // Simple coercion: find the first digit and try to parse from there
+    int start = -1;
+    for (unsigned int i = 0; i < versionString.length(); i++) {
+        if (isDigit(versionString.charAt(i))) {
+            start = i;
+            break;
+        }
+    }
+    if (start == -1) return SemVer();
+
+    String s = versionString.substring(start);
+    // Try full parse first
+    SemVer v(s);
+    if (v.valid) return v;
+
+    // Try partial: X.Y or X
+    int dot1 = s.indexOf('.');
+    if (dot1 == -1) {
+        // Just a major version?
+        // Check if it's purely numeric
+        int end = 0;
+        while(end < (int)s.length() && isDigit(s.charAt(end))) end++;
+        if (end == 0) return SemVer();
+        SemVer res;
+        if (res.parseUint32(s, 0, end, res.major)) {
+            res.minor = 0;
+            res.patch = 0;
+            res.valid = true;
+            return res;
+        }
+        return SemVer();
+    }
+
+    int dot2 = s.indexOf('.', dot1 + 1);
+    if (dot2 == -1) {
+        // X.Y?
+        int end = dot1 + 1;
+        while(end < (int)s.length() && isDigit(s.charAt(end))) end++;
+        SemVer res;
+        if (res.parseUint32(s, 0, dot1, res.major) && res.parseUint32(s, dot1+1, end, res.minor)) {
+            res.patch = 0;
+            res.valid = true;
+            
+            // Check for trailing prerelease/build
+            int hyphen = s.indexOf('-', end);
+            int plus = s.indexOf('+', end);
+            if (hyphen != -1 || plus != -1) {
+                // Too complex for simple coerce if not standard
+                // But let's try to see if we can just re-parse it as X.Y.0...
+                String full = s.substring(0, dot1) + "." + s.substring(dot1 + 1, end) + ".0" + s.substring(end);
+                return SemVer(full);
+            }
+            return res;
+        }
+    }
+
+    return SemVer(); // Fallback
+}
+
+SemVer::DiffType SemVer::diff(const SemVer& other) const {
+    if (!valid || !other.valid) return NONE;
+    if (major != other.major) return MAJOR;
+    if (minor != other.minor) return MINOR;
+    if (patch != other.patch) return PATCH;
+    if (prerelease != other.prerelease) return PRERELEASE;
+    return NONE;
+}
+
+void SemVer::incMajor() {
+    major++;
+    minor = 0;
+    patch = 0;
+    prerelease = "";
+    build = "";
+}
+
+void SemVer::incMinor() {
+    minor++;
+    patch = 0;
+    prerelease = "";
+    build = "";
+}
+
+void SemVer::incPatch() {
+    patch++;
+    prerelease = "";
+    build = "";
+}
 
 // IMPORTANT: Updated comparePrerelease to use index-based substrings or correct logic
 int SemVer::comparePrerelease(const String& a, const String& b) const {

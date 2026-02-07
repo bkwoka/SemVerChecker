@@ -149,4 +149,8 @@ inline bool isDigit(char c) {
     return std::isdigit(static_cast<unsigned char>(c));
 }
 
+inline bool isAlpha(char c) {
+    return std::isalpha(static_cast<unsigned char>(c));
+}
+
 #endif
