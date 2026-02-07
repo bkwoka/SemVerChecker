@@ -18,7 +18,6 @@ public:
     static const size_t MAX_VERSION_LEN = 64; 
 
     SemVer();
-    // Pass-by-reference to avoid heap allocations
     explicit SemVer(const String& versionString); 
     explicit SemVer(const char* versionString);
 
@@ -46,19 +45,26 @@ public:
 
     DiffType diff(const SemVer& other) const;
     
-    // Modification methods (resets build/prerelease)
     void incMajor();
     void incMinor();
     void incPatch();
 
 private:
-    void parse(const String& versionString);
-    int comparePrerelease(const String& a, const String& b) const;
-    
+    // Architecture methods
+    void parse(const String& inputRaw);
+    bool basicGuards(const String& input) const;
+    bool splitMainParts(const String& input, int& dot1, int& dot2, int& hyphen, int& plus) const;
+    bool validateCore(const String& input, int dot1, int dot2, int endOfPatch) const;
+    bool validatePrerelease(const String& input, int start, int end) const;
+    bool validateBuild(const String& input, int start, int end) const;
+    bool parseCore(const String& input, int dot1, int dot2, int endOfPatch, uint32_t& maj, uint32_t& min, uint32_t& pat) const;
+    void commit(uint32_t maj, uint32_t min, uint32_t pat, const String& pre, const String& bld);
+
     // Helpers
-    bool isNumeric(const String& s) const;
-    bool parseUint32(const String& s, uint32_t& out) const;
-    bool isValidIdentifier(const String& fullId, bool allowLeadingZeros) const;
+    int comparePrerelease(const String& a, const String& b) const;
+    bool isNumeric(const String& s, int start, int end) const;
+    bool checkSegment(const String& s, int start, int end, bool isPrerelease) const;
+    bool parseUint32(const String& s, int start, int end, uint32_t& out) const;
 };
 
 #endif
