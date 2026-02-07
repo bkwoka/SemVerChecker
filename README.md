@@ -12,7 +12,8 @@ A lightweight, robust Semantic Versioning (SemVer 2.0.0) parser and checker for 
 - **Comparison Operators**: Easy-to-use operators (`<`, `<=`, `==`, `>=`, `>`, `!=`).
 - **Memory Efficient**: Minimal footprint, suitable for embedded systems.
 - **No External Dependencies**: Built using standard C++ and Arduino types.
-- **Utility Methods**: Includes version coercion and upgrade checking logic.
+- **Utility Methods**: Includes version coercion, upgrade checking, and version incrementing (`incMajor`, `incMinor`, `incPatch`).
+- **Security Focused**: Built-in length limits (`MAX_VERSION_LEN`) to prevent memory issues.
 
 ## Installation
 
@@ -71,11 +72,22 @@ void checkForUpdate() {
 
 ### `SemVer` Class
 - `SemVer(String versionString)`: Parse a version string.
-- `bool isValid()`: Check if the version string was parsed correctly.
-- `String toString()`: Get the string representation.
-- `DiffType diff(const SemVer& other)`: Returns the type of difference (`MAJOR`, `MINOR`, `PATCH`, `PRERELEASE`, `NONE`).
-- `static bool isUpgrade(String base, String next)`: Static helper for upgrade logic.
-- `static SemVer coerce(String versionString)`: Attempt to clean and parse a non-standard version string.
+- `bool isValid() const`: Check if the version string was parsed correctly.
+- `String toString() const`: Get the string representation.
+- `SemVer::DiffType diff(const SemVer& other) const`: Returns the type of difference.
+- `void incMajor()`: Increment major version and reset lower components.
+- `void incMinor()`: Increment minor version and reset patch.
+- `void incPatch()`: Increment patch version.
+- `static bool isUpgrade(const String& base, const String& next)`: Static helper for upgrade logic.
+- `static SemVer coerce(const String& versionString)`: Attempt to clean and parse a non-standard version string.
+- `static const size_t MAX_VERSION_LEN`: Maximum allowed length for a version string (default: 64).
+
+### `SemVer::DiffType` Enum
+- `NONE`: No difference.
+- `MAJOR`: Major version difference.
+- `MINOR`: Minor version difference.
+- `PATCH`: Patch version difference.
+- `PRERELEASE`: Pre-release identifier difference.
 
 ## Testing
 
