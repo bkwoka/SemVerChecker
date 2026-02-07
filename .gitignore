@@ -1,0 +1,40 @@
+# Prerequisites
+.pio/
+.pioenvs/
+.piolibdeps/
+.clangd/
+.gcc-flags.json
+fp-flags.json
+libdeps/
+
+# Build artifacts
+bin/
+gen/
+out/
+build/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+
+# VS Code
+.vscode/.browserslistrc
+.vscode/*.log
+.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Unit tests
+test_results/
