@@ -18,7 +18,7 @@ public:
     String(int i) : _s(std::to_string(i)) {}
     String(long l) : _s(std::to_string(l)) {}
 
-    int length() const {
+    size_t length() const {
         return _s.length();
     }
 
@@ -27,9 +27,15 @@ public:
         return (pos == std::string::npos) ? -1 : (int)pos;
     }
 
-    int indexOf(char c, int fromIndex) const {
+    int indexOf(char c, size_t fromIndex) const {
         if (fromIndex >= _s.length()) return -1;
         size_t pos = _s.find(c, fromIndex);
+        return (pos == std::string::npos) ? -1 : (int)pos;
+    }
+
+    int indexOf(const char* s, size_t fromIndex = 0) const {
+        if (fromIndex >= _s.length()) return -1;
+        size_t pos = _s.find(s, fromIndex);
         return (pos == std::string::npos) ? -1 : (int)pos;
     }
 
@@ -53,14 +59,19 @@ public:
         }
     }
 
-    char charAt(int index) const {
-        if (index < 0 || index >= _s.length()) return 0;
+    char charAt(size_t index) const {
+        if (index >= _s.length()) return 0;
         return _s[index];
     }
 
     bool startsWith(const String& prefix) const {
-        if (prefix.length() > length()) return false;
+        if ((unsigned int)prefix.length() > (unsigned int)length()) return false;
         return _s.compare(0, prefix.length(), prefix._s) == 0;
+    }
+
+    bool endsWith(const String& suffix) const {
+        if ((unsigned int)suffix.length() > (unsigned int)length()) return false;
+        return _s.compare(length() - suffix.length(), suffix.length(), suffix._s) == 0;
     }
 
     int compareTo(const String& other) const {

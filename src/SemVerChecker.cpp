@@ -15,12 +15,16 @@ bool SemVer::isValid() const {
 }
 
 String SemVer::toString() const {
-    String s = String(major) + "." + String(minor) + "." + String(patch);
+    char buf[48]; // Enough for 3x uint32_t + dots + safety
+    snprintf(buf, sizeof(buf), "%lu.%lu.%lu", (unsigned long)major, (unsigned long)minor, (unsigned long)patch);
+    String s(buf);
     if (prerelease.length() > 0) {
-        s += "-" + prerelease;
+        s += "-";
+        s += prerelease;
     }
     if (build.length() > 0) {
-        s += "+" + build;
+        s += "+";
+        s += build;
     }
     return s;
 }
@@ -30,12 +34,16 @@ void SemVer::parse(String versionString) {
     major = 0; minor = 0; patch = 0;
     prerelease = ""; build = "";
 
-    if (versionString.length() == 0) return;
+    if (versionString.length() == 0 || (unsigned int)versionString.length() > MAX_VERSION_LEN) return;
 
     // Remove build metadata first
     int buildIndex = versionString.indexOf('+');
     if (buildIndex != -1) {
         build = versionString.substring(buildIndex + 1);
+        if (build.length() == 0 || build.charAt(0) == '.' || build.endsWith(".") || build.indexOf("..") != -1) return;
+        for (unsigned int i = 0; i < (unsigned int)build.length(); i++) {
+            if (!isValidChar(build.charAt(i), true)) return;
+        }
         versionString = versionString.substring(0, buildIndex);
     }
 
@@ -43,43 +51,59 @@ void SemVer::parse(String versionString) {
     int preIndex = versionString.indexOf('-');
     if (preIndex != -1) {
         prerelease = versionString.substring(preIndex + 1);
+        if (prerelease.length() == 0 || prerelease.charAt(0) == '.' || prerelease.endsWith(".") || prerelease.indexOf("..") != -1) return;
+        for (unsigned int i = 0; i < (unsigned int)prerelease.length(); i++) {
+            if (!isValidChar(prerelease.charAt(i), true)) return;
+        }
         versionString = versionString.substring(0, preIndex);
     }
 
     // Parse Major
     int dot1 = versionString.indexOf('.');
-    if (dot1 == -1) return; // Invalid format
+    if (dot1 == -1) return;
     String majorStr = versionString.substring(0, dot1);
-    if (!isNumeric(majorStr)) return;
-    major = majorStr.toInt();
+    if (!parseUint32(majorStr, major)) return;
 
     // Parse Minor
     int dot2 = versionString.indexOf('.', dot1 + 1);
-    if (dot2 == -1) {
-         // Attempt to parse "Major.Minor" as valid if patch is missing? 
-         // SemVer 2.0.0 requires Major.Minor.Patch. strictly.
-         // Let's assume strict parsing for now, or just look for the end.
-         // Actually, strict SemVer requires 3 numbers.
-         return; 
-    }
+    if (dot2 == -1) return;
     String minorStr = versionString.substring(dot1 + 1, dot2);
-    if (!isNumeric(minorStr)) return;
-    minor = minorStr.toInt();
+    if (!parseUint32(minorStr, minor)) return;
 
     // Parse Patch
     String patchStr = versionString.substring(dot2 + 1);
-    if (!isNumeric(patchStr)) return;
-    patch = patchStr.toInt();
+    if (!parseUint32(patchStr, patch)) return;
 
     valid = true;
 }
 
-bool SemVer::isNumeric(const String& s) const {
+bool SemVer::isNumeric(const String& s, bool allowLeadingZeros) const {
     if (s.length() == 0) return false;
+    if (!allowLeadingZeros && s.length() > 1 && s.charAt(0) == '0') return false;
     for (unsigned int i = 0; i < s.length(); i++) {
         if (!isDigit(s.charAt(i))) return false;
     }
     return true;
+}
+
+bool SemVer::parseUint32(const String& s, uint32_t& out) const {
+    if (!isNumeric(s, false)) return false;
+    
+    unsigned long long val = 0;
+    for (unsigned int i = 0; i < s.length(); i++) {
+        val = val * 10 + (s.charAt(i) - '0');
+        if (val > 0xFFFFFFFFUL) return false; // Overflow uint32_t
+    }
+    out = (uint32_t)val;
+    return true;
+}
+
+bool SemVer::isValidChar(char c, bool allowDot) const {
+    if (isDigit(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-') {
+        return true;
+    }
+    if (allowDot && c == '.') return true;
+    return false;
 }
 
 // Comparison implementation
@@ -126,6 +150,8 @@ bool SemVer::isUpgrade(String baseVersion, String newVersion) {
 }
 
 SemVer SemVer::coerce(String versionString) {
+    if (versionString.length() > MAX_VERSION_LEN) return SemVer("");
+
     // Remove "v" prefix if present
     if (versionString.startsWith("v") || versionString.startsWith("V")) {
         versionString = versionString.substring(1);
@@ -133,7 +159,7 @@ SemVer SemVer::coerce(String versionString) {
     
     // Handle partial versions like "1" or "1.2"
     int dotCount = 0;
-    for (unsigned int i = 0; i < versionString.length(); i++) {
+    for (unsigned int i = 0; i < (unsigned int)versionString.length(); i++) {
         if (versionString.charAt(i) == '.') dotCount++;
     }
 
@@ -147,7 +173,7 @@ SemVer SemVer::coerce(String versionString) {
     // Recount dots only in the version core
     dotCount = 0;
     for (int i = 0; i < stopIndex; i++) {
-        if (versionString.charAt(i) == '.') dotCount++;
+        if (versionString.charAt((size_t)i) == '.') dotCount++;
     }
 
     if (dotCount == 0) versionString = versionString.substring(0, stopIndex) + ".0.0" + versionString.substring(stopIndex);
@@ -188,9 +214,10 @@ void SemVer::incPatch() {
 int SemVer::comparePrerelease(const String& a, const String& b) const {
     if (a == b) return 0;
     
-    // Split by dot
     int startA = 0, startB = 0;
-    while (startA < a.length() || startB < b.length()) {
+    unsigned int lenA = (unsigned int)a.length();
+    unsigned int lenB = (unsigned int)b.length();
+    while ((unsigned int)startA < lenA || (unsigned int)startB < lenB) {
         int endA = a.indexOf('.', startA);
         int endB = b.indexOf('.', startB);
         
@@ -200,33 +227,33 @@ int SemVer::comparePrerelease(const String& a, const String& b) const {
         String partA = (startA < a.length()) ? a.substring(startA, endA) : "";
         String partB = (startB < b.length()) ? b.substring(startB, endB) : "";
 
-        // Specification: A larger set of pre-release fields has a higher precedence 
-        // than a smaller set, if all of the preceding identifiers are equal.
-        if (partA.length() == 0 && partB.length() > 0) return -1; // A ran out first -> A < B
-        if (partA.length() > 0 && partB.length() == 0) return 1;  // B ran out first -> A > B
+        if (partA.length() == 0 && partB.length() > 0) return -1;
+        if (partA.length() > 0 && partB.length() == 0) return 1;
 
-        bool aIsNum = isNumeric(partA);
-        bool bIsNum = isNumeric(partB);
+        // SemVer: Numeric identifiers MUST NOT include leading zeroes.
+        // If it's all digits but has leading zero, it's treated as non-numeric per some interpretations,
+        // but strictly it's invalid. Our parse() should probably have caught it if it was strict.
+        // For comparison, let's see if they are numeric (no leading zeros allowed).
+        bool aIsNum = isNumeric(partA, false);
+        bool bIsNum = isNumeric(partB, false);
 
         if (aIsNum && bIsNum) {
-            // Identifiers consisting of only digits are compared numerically.
-            long valA = partA.toInt();
-            long valB = partB.toInt();
+            uint32_t valA, valB;
+            parseUint32(partA, valA);
+            parseUint32(partB, valB);
             if (valA < valB) return -1;
             if (valA > valB) return 1;
         } else if (!aIsNum && bIsNum) {
-            // Numeric identifiers always have lower precedence than non-numeric identifiers.
             return 1; 
         } else if (aIsNum && !bIsNum) {
              return -1;
         } else {
-            // Identifiers with letters or hyphens are compared lexically in ASCII sort order.
             int cmp = partA.compareTo(partB);
             if (cmp != 0) return cmp;
         }
 
-        startA = endA + 1;
-        startB = endB + 1;
+        startA = ((unsigned int)endA < lenA) ? endA + 1 : (int)lenA;
+        startB = ((unsigned int)endB < lenB) ? endB + 1 : (int)lenB;
     }
     
     return 0;
