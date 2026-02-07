@@ -17,9 +17,19 @@ public:
     String(const std::string& s) : _s(s) {}
     String(int i) : _s(std::to_string(i)) {}
     String(long l) : _s(std::to_string(l)) {}
+    String(unsigned long l) : _s(std::to_string(l)) {}
+    String(unsigned int i) : _s(std::to_string(i)) {}
 
     size_t length() const {
         return _s.length();
+    }
+
+    void reserve(size_t size) {
+        _s.reserve(size);
+    }
+
+    const char* c_str() const {
+        return _s.c_str();
     }
 
     int indexOf(char c) const {
@@ -40,13 +50,13 @@ public:
     }
 
     String substring(int start) const {
-        if (start >= _s.length()) return String("");
+        if (start >= (int)_s.length()) return String("");
         return String(_s.substr(start));
     }
 
     String substring(int start, int end) const {
-        if (start >= _s.length()) return String("");
-        if (end > _s.length()) end = _s.length();
+        if (start >= (int)_s.length()) return String("");
+        if (end > (int)_s.length()) end = (int)_s.length();
         if (start > end) return String("");
         return String(_s.substr(start, end - start));
     }
@@ -111,6 +121,21 @@ public:
 
     String& operator+=(const char* other) {
         _s += other;
+        return *this;
+    }
+
+    String& operator+=(char c) {
+        _s += c;
+        return *this;
+    }
+
+    String& operator+=(unsigned int i) {
+        _s += std::to_string(i);
+        return *this;
+    }
+
+    String& operator+=(unsigned long l) {
+        _s += std::to_string(l);
         return *this;
     }
 };

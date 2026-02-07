@@ -6,6 +6,7 @@
 
 class SemVer {
 public:
+    // Use uint32_t per SemVer spec (non-negative integers)
     uint32_t major;
     uint32_t minor;
     uint32_t patch;
@@ -13,11 +14,13 @@ public:
     String build;
     bool valid;
 
-    static const size_t MAX_VERSION_LEN = 128;
+    // Length limit for security (protection against DoS/memory exhaustion)
+    static const size_t MAX_VERSION_LEN = 64; 
 
     SemVer();
-    SemVer(String versionString);
-    SemVer(const char* versionString);
+    // Pass-by-reference to avoid heap allocations
+    explicit SemVer(const String& versionString); 
+    explicit SemVer(const char* versionString);
 
     bool isValid() const;
     String toString() const;
@@ -38,20 +41,24 @@ public:
         PRERELEASE
     };
 
-    static bool isUpgrade(String baseVersion, String newVersion);
-    static SemVer coerce(String versionString);
+    static bool isUpgrade(const String& baseVersion, const String& newVersion);
+    static SemVer coerce(const String& versionString);
 
     DiffType diff(const SemVer& other) const;
+    
+    // Modification methods (resets build/prerelease)
     void incMajor();
     void incMinor();
     void incPatch();
 
 private:
-    void parse(String versionString);
+    void parse(const String& versionString);
     int comparePrerelease(const String& a, const String& b) const;
-    bool isNumeric(const String& s, bool allowLeadingZeros = false) const;
+    
+    // Helpers
+    bool isNumeric(const String& s) const;
     bool parseUint32(const String& s, uint32_t& out) const;
-    bool isValidChar(char c, bool allowDot = false) const;
+    bool isValidIdentifier(const String& fullId, bool allowLeadingZeros) const;
 };
 
 #endif

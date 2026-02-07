@@ -261,6 +261,59 @@ int main() {
         assert(!v.isValid(), "Empty token in build (..) is invalid");
     }
 
+    // --- More Complex Pre-release Precedence ---
+    std::cout << "\n--- Complex Pre-release Precedence ---" << std::endl;
+    {
+        // Spec order: alpha < alpha.1 < alpha.beta < beta < beta.2 < beta.11 < rc.1 < 1.0.0
+        SemVer v1("1.0.0-alpha");
+        SemVer v2("1.0.0-alpha.1");
+        SemVer v3("1.0.0-alpha.beta");
+        SemVer v4("1.0.0-beta");
+        SemVer v5("1.0.0-beta.2");
+        SemVer v6("1.0.0-beta.11");
+        SemVer v7("1.0.0-rc.1");
+        SemVer v8("1.0.0");
+
+        assert(v1 < v2, "alpha < alpha.1");
+        assert(v2 < v3, "alpha.1 < alpha.beta");
+        assert(v3 < v4, "alpha.beta < beta");
+        assert(v4 < v5, "beta < beta.2");
+        assert(v5 < v6, "beta.2 < beta.11");
+        assert(v6 < v7, "beta.11 < rc.1");
+        assert(v7 < v8, "rc.1 < 1.0.0");
+    }
+    {
+        SemVer v1("1.2.3-alpha-beta"); // Identifiers with dashes
+        assert(v1.isValid(), "Dashes in prerelease are valid");
+        assertString(v1.prerelease, "alpha-beta", "Prerelease identifies correctly with dashes");
+    }
+    {
+        SemVer v1("1.2.3+build-metadata");
+        assert(v1.isValid(), "Dashes in build metadata are valid");
+    }
+
+    // --- Coerce Edge Cases ---
+    std::cout << "\n--- Coerce Edge Cases ---" << std::endl;
+    {
+        SemVer v = SemVer::coerce("1.2.3.4.5");
+        assert(!v.isValid(), "Coerce with too many dots results in invalid SemVer");
+    }
+    {
+        SemVer v = SemVer::coerce("v1.2-alpha+build");
+        assert(v.isValid(), "Coerce complex partial v1.2-alpha+build");
+        assertEqual(v.major, 1, "Complex coerce major");
+        assertEqual(v.minor, 2, "Complex coerce minor");
+        assertEqual(v.patch, 0, "Complex coerce patch");
+        assertString(v.prerelease, "alpha", "Complex coerce prerelease");
+        assertString(v.build, "build", "Complex coerce build");
+    }
+    {
+        SemVer v = SemVer::coerce("2.1+onlybuild");
+        assert(v.isValid(), "Coerce 2.1+onlybuild");
+        assertEqual(v.patch, 0, "Coerce 2.1+onlybuild patch is 0");
+        assertString(v.build, "onlybuild", "Coerce 2.1+onlybuild build verified");
+    }
+
     // --- Summary ---
     std::cout << "\n==================================" << std::endl;
     std::cout << "Tests Passed: " << testsPassed << std::endl;
