@@ -1,6 +1,6 @@
 {
   "name": "SemVerChecker",
-  "version": "1.1.2",
+  "version": "1.0.0",
   "description": "SemVerChecker - Lightweight Semantic Versioning (SemVer 2.0.0) parser and comparator for Arduino, ESP32, etc. Perfect for OTA updates and firmware compatibility checks.",
   "keywords": [
     "semver",
