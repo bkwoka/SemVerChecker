@@ -1,8 +1,22 @@
 {
   "name": "SemVerChecker",
-  "version": "1.1.0",
-  "description": "A lightweight Semantic Versioning (SemVer 2.0.0) checker for Arduino and ESP platforms.",
-  "keywords": ["semver", "version", "compare", "parsing", "utility"],
+  "version": "1.1.1",
+  "description": "SemVerChecker - Robust Semantic Versioning (SemVer 2.0.0) parser and comparator for Arduino, ESP32, etc. Perfect for OTA updates and firmware compatibility checks.",
+  "keywords": [
+    "semver",
+    "version",
+    "semantic",
+    "versioning",
+    "compare",
+    "parsing",
+    "ota",
+    "update",
+    "firmware",
+    "esp32",
+    "esp8266",
+    "avr",
+    "utility"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/bkwoka/SemVerChecker.git"
@@ -14,14 +28,20 @@
     }
   ],
   "license": "MIT",
-  "frameworks": ["arduino"],
-  "platforms": ["*"],
+  "frameworks": [
+    "arduino"
+  ],
+  "platforms": [
+    "*"
+  ],
   "export": {
     "include": [
       "src",
+      "examples",
       "library.json",
       "library.properties",
       "LICENSE",
+      "CONTRIBUTING.md",
       "README.md"
     ]
   }
