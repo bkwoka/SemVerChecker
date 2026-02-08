@@ -32,7 +32,7 @@ Add the following to your `platformio.ini`:
 
 ```ini
 lib_deps =
-    bkwoka/SemVerChecker @ ^1.1.2
+    bkwoka/SemVerChecker
 ```
 
 ## Usage

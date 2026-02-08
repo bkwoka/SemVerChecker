@@ -364,6 +364,7 @@ bool SemVer::isUpgrade(const String& baseVersion, const String& newVersion) {
 }
 #endif
 
+// WARNING: This function uses naive heuristic logic and may behave unpredictably with complex or malformed input.
 SemVer SemVer::coerce(const char* versionString) {
     if (!versionString) return SemVer();
     int start = -1;

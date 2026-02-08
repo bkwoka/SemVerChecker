@@ -57,8 +57,16 @@ public:
     static bool isUpgrade(const String& baseVersion, const String& newVersion);
 #endif
 
+    /** 
+     * @brief Coerces a string into a SemVer object.
+     * @warning This function uses naive heuristic logic and may behave unpredictably with complex or malformed input.
+     */
     static SemVer coerce(const char* versionString);
 #ifdef ARDUINO
+    /** 
+     * @brief Coerces a string into a SemVer object.
+     * @warning This function uses naive heuristic logic and may behave unpredictably with complex or malformed input.
+     */
     static SemVer coerce(const String& versionString);
 #endif
 
