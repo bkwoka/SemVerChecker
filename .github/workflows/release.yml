@@ -1,0 +1,53 @@
+name: Update Version on Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to set (e.g. 1.2.3)"
+        required: true
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.event.release.tag_name }}"
+          fi
+          # Remove 'v' prefix if present
+          VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update files
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+
+          # Update library.json
+          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" library.json
+
+          # Update library.properties
+          sed -i "s/^version=.*/version=$VERSION/" library.properties
+
+          # Update README.md (looks for bkwoka/SemVerChecker @ ^x.y.z)
+          sed -i "s/bkwoka\/SemVerChecker @ \^[0-9.]*/bkwoka\/SemVerChecker @ ^$VERSION/" README.md
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add library.json library.properties README.md
+          git commit -m "chore: bump version to ${{ steps.get_version.outputs.VERSION }}" || echo "No changes to commit"
+          git push origin main
