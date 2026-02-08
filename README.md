@@ -10,18 +10,21 @@ A lightweight, robust Semantic Versioning (SemVer 2.0.0) parser and checker for 
 
 - **Zero-Allocation Architecture**: Core logic uses a single internal buffer and pointer offsets, eliminating memory fragmentation.
 - **Full SemVer 2.0.0 Support**: Handles major, minor, patch, pre-release identifiers, and build metadata.
+- **Robust Validation**: Enforces strict SemVer rules (no leading zeros, character set validation) to prevent security issues.
+- **Loose Parsing (`coerce`)**: Can parse non-standard input like `v1.2` or `1.0` into valid SemVer objects.
 - **Comparison Operators**: Easy-to-use operators (`<`, `<=`, `==`, `>=`, `>`, `!=`).
-- **Memory Efficient**: Minimal footprint, suitable for extremely constrained embedded systems.
+- **Memory Efficient**: Minimal footprint, suitable for extremely constrained embedded systems (AVR).
 - **Portable**: C++ core with optional Arduino wrappers (can be used in non-Arduino environments).
-- **Security Focused**: Built-in length limits (`MAX_VERSION_LEN`) to prevent buffer overflows.
+- **Security Focused**: Built-in length limits (`MAX_VERSION_LEN`) preventing buffer overflows.
 
 ## Installation
 
 ### Arduino IDE
 
-1. Download the latest release from the [Releases](https://github.com/bkwoka/SemVerChecker/releases) page.
-2. In the Arduino IDE, go to **Sketch** -> **Include Library** -> **Add .ZIP Library...**
-3. Select the downloaded ZIP file.
+1. Search for **SemVerChecker** in the Library Manager.
+2. Click **Install**.
+
+Alternatively, download the latest release from the [Releases](https://github.com/bkwoka/SemVerChecker/releases) page and install via **Sketch** -> **Include Library** -> **Add .ZIP Library...**
 
 ### PlatformIO
 
@@ -29,7 +32,7 @@ Add the following to your `platformio.ini`:
 
 ```ini
 lib_deps =
-    bkwoka/SemVerChecker @ ^1.1.0
+    bkwoka/SemVerChecker @ ^1.1.1
 ```
 
 ## Usage
@@ -42,19 +45,37 @@ lib_deps =
 void setup() {
   Serial.begin(115200);
 
+  // Parse versions
   SemVer currentVersion("1.2.3-beta.1");
   SemVer minVersion("1.0.0");
 
-  if (currentVersion >= minVersion) {
-    Serial.println("Version is compatible.");
+  if (currentVersion.isValid() && currentVersion >= minVersion) {
+    Serial.println(F("Version is compatible."));
   }
 
+  // Pre-release precedence
   SemVer v1("1.0.0-rc.1");
   SemVer v2("1.0.0");
 
   if (v1 < v2) {
-    Serial.println("Pre-release is older than stable release.");
+    Serial.println(F("Pre-release is older than stable release."));
   }
+}
+```
+
+### Flexible Parsing (`coerce`)
+
+Handle "dirty" or partial inputs from user/API:
+
+```cpp
+SemVer v = SemVer::coerce("v1.2"); 
+// Parses as 1.2.0
+
+SemVer v2 = SemVer::coerce("2");
+// Parses as 2.0.0
+
+if (v.isValid()) {
+    Serial.println(v.toString());
 }
 ```
 
@@ -68,7 +89,7 @@ void checkForUpdate() {
   String available = "1.1.0";
 
   if (SemVer::isUpgrade(current, available)) {
-    Serial.println("An update is available!");
+    Serial.println(F("An update is available!"));
   }
 }
 ```
@@ -82,10 +103,8 @@ void checkForUpdate() {
 - `void toString(char* buffer, size_t len) const`: Fill a buffer with the string representation.
 - `const char* getPrerelease() const`: Get pointer to pre-release string.
 - `const char* getBuild() const`: Get pointer to build metadata string.
-- `SemVer::DiffType diff(const SemVer& other) const`: Returns the type of difference.
-- `void incMajor()`: Increment major version and reset lower components.
-- `void incMinor()`: Increment minor version and reset patch.
-- `void incPatch()`: Increment patch version.
+- `SemVer::DiffType diff(const SemVer& other) const`: Returns the type of difference (`MAJOR`, `MINOR`, `PATCH`, `PRERELEASE`, `NONE`).
+- `void incMajor()`, `incMinor()`, `incPatch()`: Increment components.
 - `static bool isUpgrade(const char* base, const char* next)`: Static helper for upgrade logic.
 - `static SemVer coerce(const char* versionString)`: Attempt to clean and parse a non-standard version string.
 - `static const size_t MAX_VERSION_LEN`: Maximum allowed length for a version string (64 bytes).
@@ -99,30 +118,20 @@ If `ARDUINO` is defined, the following methods are also available:
 - `static bool isUpgrade(const String& base, const String& next)`
 - `static SemVer coerce(const String& versionString)`
 
-### `SemVer::DiffType` Enum
-
-- `NONE`: No difference.
-- `MAJOR`: Major version difference.
-- `MINOR`: Minor version difference.
-- `PATCH`: Patch version difference.
-- `PRERELEASE`: Pre-release identifier difference.
-
 ## Testing
 
-### Native Tests (Linux/macOS)
-
-The project includes a comprehensive suite of native unit tests that can be run without an Arduino board.
+The project includes a comprehensive suite of native unit tests (Linux/macOS) and Arduino-compatible tests.
 
 ```bash
+# Run native tests
 make -C tests
 ```
 
-### Arduino Tests
-
-You can also run the same tests on an Arduino board or ESP8266/ESP32 using the `UnitTests` example:
-
-1. Open `examples/UnitTests/UnitTests.ino` in the Arduino IDE.
-2. Upload to your board and open the Serial Monitor (115200 baud).
+Tests cover:
+- strict SemVer 2.0.0 parsing
+- security edge cases (overflow, leading zeros)
+- precedence rules
+- invalid inputs
 
 ## License
 
