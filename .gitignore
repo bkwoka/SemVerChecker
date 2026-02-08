@@ -32,3 +32,5 @@ Thumbs.db
 
 # Unit tests
 test_results/
+tests/run_tests
+tests/run_tests_wsl
