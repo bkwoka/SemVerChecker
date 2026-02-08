@@ -28,11 +28,20 @@ jobs:
       - name: Install AVR Core
         run: arduino-cli core install arduino:avr
 
-      - name: Compile BasicCheck
-        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/BasicCheck/BasicCheck.ino
+      - name: Compile BasicUsage
+        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/BasicUsage/BasicUsage.ino
 
-      - name: Compile UpgradeCheck
-        run: arduino-cli compile --fqbn arduino:avr:uno examples/UpgradeCheck/UpgradeCheck.ino --libraries .
+      - name: Compile FirmwareUpdate
+        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/FirmwareUpdate/FirmwareUpdate.ino
+
+      - name: Compile APICompatibility
+        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/APICompatibility/APICompatibility.ino
+
+      - name: Compile ConfigMigration
+        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/ConfigMigration/ConfigMigration.ino
+
+      - name: Compile Testing
+        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/Testing/Testing.ino
 
   lint:
     name: Lint Library
