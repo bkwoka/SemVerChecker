@@ -4,7 +4,7 @@
 [![Arduino Library Registry](https://www.arduinosvg.com/badge/SemVerChecker.svg)](https://www.arduino.cc/reference/en/libraries/semverchecker/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A lightweight, robust Semantic Versioning (SemVer 2.0.0) parser and checker for Arduino and ESP32, etc. platforms.
+A lightweight Semantic Versioning (SemVer 2.0.0) parser and checker for Arduino and ESP32, etc. platforms.
 
 ## Features
 
@@ -32,7 +32,7 @@ Add the following to your `platformio.ini`:
 
 ```ini
 lib_deps =
-    bkwoka/SemVerChecker @ ^1.1.1
+    bkwoka/SemVerChecker @ ^1.1.2
 ```
 
 ## Usage
@@ -68,7 +68,7 @@ void setup() {
 Handle "dirty" or partial inputs from user/API:
 
 ```cpp
-SemVer v = SemVer::coerce("v1.2"); 
+SemVer v = SemVer::coerce("v1.2");
 // Parses as 1.2.0
 
 SemVer v2 = SemVer::coerce("2");
@@ -128,6 +128,7 @@ make -C tests
 ```
 
 Tests cover:
+
 - strict SemVer 2.0.0 parsing
 - security edge cases (overflow, leading zeros)
 - precedence rules
