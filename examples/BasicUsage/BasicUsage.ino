@@ -1,5 +1,5 @@
 /*
-  BasicCheck.ino - Basic usage example for SemVerChecker library.
+  BasicUsage.ino - Basic usage example for SemVerChecker library.
   Demonstrates:
   - Parsing version strings
   - Validating versions (handling invalid input)
