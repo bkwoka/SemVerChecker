@@ -4,7 +4,7 @@
 [![Arduino Library Registry](https://www.arduinosvg.com/badge/SemVerChecker.svg)](https://www.arduino.cc/reference/en/libraries/semverchecker/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A lightweight, robust Semantic Versioning (SemVer 2.0.0) parser and checker for Arduino and ESP8266/ESP32 platforms.
+A lightweight, robust Semantic Versioning (SemVer 2.0.0) parser and checker for Arduino and ESP32, etc. platforms.
 
 ## Features
 

@@ -1,12 +1,20 @@
 {
   "name": "SemVerChecker",
   "version": "1.1.1",
-  "description": "A lightweight Semantic Versioning (SemVer 2.0.0) checker for Arduino and ESP platforms.",
+  "description": "SemVerChecker - Robust Semantic Versioning (SemVer 2.0.0) parser and comparator for Arduino, ESP32, etc. Perfect for OTA updates and firmware compatibility checks.",
   "keywords": [
     "semver",
     "version",
+    "semantic",
+    "versioning",
     "compare",
     "parsing",
+    "ota",
+    "update",
+    "firmware",
+    "esp32",
+    "esp8266",
+    "avr",
     "utility"
   ],
   "repository": {
