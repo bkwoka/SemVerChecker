@@ -83,6 +83,8 @@ void setup() {
         Serial.println(F("       → Major version mismatch (breaking changes)"));
       } else if (required.major == 0 && installed.minor != required.minor) {
         Serial.println(F("       → 0.x.x: Minor version change is breaking"));
+      } else if (required.major == 0 && required.minor == 0 && installed.patch != required.patch) {
+        Serial.println(F("       → 0.0.x: Patch version change is breaking"));
       }
       Serial.println();
       
@@ -107,8 +109,9 @@ void setup() {
   Serial.println(F("  For versions 0.x.x (pre-1.0):"));
   Serial.println(F("    • MAJOR must be 0"));
   Serial.println(F("    • MINOR must match (breaking in 0.x.x!)"));
-  Serial.println(F("    • PATCH can be higher"));
+  Serial.println(F("    • PATCH can be higher (EXCEPT for 0.0.x)"));
   Serial.println(F("    Example: 0.3.5 does NOT satisfy ^0.2.0 ✗"));
+  Serial.println(F("    Example: 0.0.2 does NOT satisfy ^0.0.1 ✗ (Strict 0.0.x)"));
 
   // ============================================
   // 3. Demonstrate 0.x.x Special Handling
