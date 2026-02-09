@@ -44,15 +44,15 @@ void setup() {
   // Simulate server response
   // ============================================
   // In real application, this would come from HTTP/MQTT
-  const char* serverResponse = "v2.3.0";  // Simulated API response
+  const char* serverResponse = "2.3.0";  // Simulated API response
 
   Serial.print(F("Checking server... "));
   Serial.flush();
   delay(500);  // Simulate network delay
   Serial.println(F("OK"));
 
-  // Parse server version (use coerce to handle "v" prefix)
-  SemVer available = SemVer::coerce(serverResponse);
+  // Parse server version
+  SemVer available(serverResponse);
   
   if (!available.isValid()) {
     Serial.println(F("✗ ERROR: Invalid version from server"));

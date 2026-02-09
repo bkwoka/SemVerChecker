@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstring>
 
 // Include local mock Arduino environment
 #include "Arduino.h"
@@ -140,27 +141,7 @@ int main() {
         assert(v.isValid(), "Parse large numbers valid");
     }
 
-    // --- Coerce Tests ---
-    std::cout << "\n--- Coerce Tests ---" << std::endl;
-    {
-        SemVer v = SemVer::coerce("v1.2.3");
-        assert(v.isValid(), "Coerce v1.2.3 valid");
-        assertEqual(v.major, 1, "Major 1");
-    }
-    {
-        SemVer v = SemVer::coerce("1.2");
-        assert(v.isValid(), "Coerce 1.2 valid");
-        assertEqual(v.major, 1, "Major 1");
-        assertEqual(v.minor, 2, "Minor 2");
-        assertEqual(v.patch, 0, "Patch 0");
-    }
-    {
-        SemVer v = SemVer::coerce("1");
-        assert(v.isValid(), "Coerce 1 valid");
-        assertEqual(v.major, 1, "Major 1");
-        assertEqual(v.minor, 0, "Minor 0");
-        assertEqual(v.patch, 0, "Patch 0");
-    }
+
 
     // --- Diff Tests ---
     std::cout << "\n--- Diff Tests ---" << std::endl;
@@ -209,8 +190,20 @@ int main() {
     {
         String longVer = "1.2.3-";
         for(int i=0; i<150; i++) longVer += "a";
-        SemVer v(longVer);
+        SemVer v(longVer.c_str());
         assert(!v.isValid(), "Version exceeding MAX_VERSION_LEN is invalid");
+    }
+    {
+        char badBuf[200];
+        memset(badBuf, '1', sizeof(badBuf)); 
+        
+        char longBuf[70];
+        memset(longBuf, 'a', 68);
+        longBuf[68] = '0'; // terminate late
+        longBuf[69] = 0;
+
+        SemVer v(longBuf);
+        assert(!v.isValid(), "Overly long string rejected safely");
     }
     {
         SemVer v("1.2.3-alpha!");
@@ -333,27 +326,7 @@ int main() {
         assert(v1.isValid(), "Dashes in build metadata are valid");
     }
 
-    // --- Coerce Edge Cases ---
-    std::cout << "\n--- Coerce Edge Cases ---" << std::endl;
-    {
-        SemVer v = SemVer::coerce("1.2.3.4.5");
-        assert(!v.isValid(), "Coerce with too many dots results in invalid SemVer");
-    }
-    {
-        SemVer v = SemVer::coerce("v1.2-alpha+build");
-        assert(v.isValid(), "Coerce complex partial v1.2-alpha+build");
-        assertEqual(v.major, 1, "Complex coerce major");
-        assertEqual(v.minor, 2, "Complex coerce minor");
-        assertEqual(v.patch, 0, "Complex coerce patch");
-        assertString(v.getPrerelease(), "alpha", "Complex coerce prerelease");
-        assertString(v.getBuild(), "build", "Complex coerce build");
-    }
-    {
-        SemVer v = SemVer::coerce("2.1+onlybuild");
-        assert(v.isValid(), "Coerce 2.1+onlybuild");
-        assertEqual(v.patch, 0, "Coerce 2.1+onlybuild patch is 0");
-        assertString(v.getBuild(), "onlybuild", "Coerce 2.1+onlybuild build verified");
-    }
+
 
     // --- Exhaustive Compliance Tests ---
     std::cout << "\n--- Exhaustive Compliance Tests ---" << std::endl;
@@ -388,7 +361,8 @@ int main() {
             "1.2.3.DEV", "1.2-SNAPSHOT", "1.2.31.2.3----RC-SNAPSHOT.12.09.1--..12+788",
             "1.2-RC-SNAPSHOT", "-1.0.3-gamma+b7718", "+justmeta",
             "9.8.7+meta+meta", "9.8.7-whatever+meta+meta",
-            "99999999999999999999999.999999999999999999.99999999999999999----RC-SNAPSHOT.12.09.1--------------------------------..12"
+            "99999999999999999999999.999999999999999999.99999999999999999----RC-SNAPSHOT.12.09.1--------------------------------..12",
+            "01.2.3", "1.02.3", "1.2.03", "1.0.0-01", "1.0.0-", "1.0.0+"
         };
         for (const char* vStr : invalidVersions) {
             SemVer v(vStr);

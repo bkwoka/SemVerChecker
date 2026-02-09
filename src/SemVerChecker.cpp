@@ -1,10 +1,17 @@
 #include "SemVerChecker.h"
 
-// Internal Utils Implementation
+
 size_t SemVer::custom_strlen(const char* s) {
     if (!s) return 0;
     size_t len = 0;
     while (s[len]) len++;
+    return len;
+}
+
+size_t SemVer::custom_strnlen(const char* s, size_t max_len) {
+    if (!s) return 0;
+    size_t len = 0;
+    while (len < max_len && s[len]) len++;
     return len;
 }
 
@@ -34,7 +41,7 @@ int SemVer::findChar(const char* s, char c, int start) {
     return -1;
 }
 
-// SemVer Implementation
+
 SemVer::SemVer() : major(0), minor(0), patch(0), _preOffset(0), _buildOffset(0), _valid(false) {
     _buffer[0] = '\0';
 }
@@ -55,7 +62,7 @@ void SemVer::parse(const char* input) {
         return;
     }
 
-    // Copy to internal buffer for in-place manipulation
+    // Copy to internal buffer
     custom_strncpy(_buffer, input, MAX_VERSION_LEN);
     _buffer[MAX_VERSION_LEN] = '\0';
 
@@ -111,7 +118,8 @@ void SemVer::parse(const char* input) {
 
 bool SemVer::basicGuards(const char* input) const {
     if (!input || input[0] == '\0') return false;
-    size_t len = custom_strlen(input);
+    // Check up to MAX_VERSION_LEN + 1. If longer, reject.
+    size_t len = custom_strnlen(input, MAX_VERSION_LEN + 1);
     if (len > MAX_VERSION_LEN) return false;
     return true;
 }
@@ -263,7 +271,7 @@ void SemVer::toString(char* buffer, size_t len) const {
         return;
     }
 
-    // Use a simple manual sprintf-like logic to avoid stdio dependency
+
     auto writeNum = [](char* b, size_t& pos, size_t l, uint32_t n) {
         if (pos >= l) return;
         if (n == 0) {
@@ -320,7 +328,6 @@ size_t SemVer::printTo(Print& p) const {
     // This avoids creating temporary String objects
     size_t n = 0;
 
-    // Helper lambda to write uint32_t
     auto writeNum = [&p, &n](uint32_t num) {
         if (num == 0) {
             n += p.print('0');
@@ -338,21 +345,18 @@ size_t SemVer::printTo(Print& p) const {
         }
     };
 
-    // Write major.minor.patch
     writeNum(major);
     n += p.print('.');
     writeNum(minor);
     n += p.print('.');
     writeNum(patch);
 
-    // Write prerelease if present
     const char* pre = getPrerelease();
     if (pre[0] != '\0') {
         n += p.print('-');
         n += p.print(pre);
     }
 
-    // Write build metadata if present
     const char* bld = getBuild();
     if (bld[0] != '\0') {
         n += p.print('+');
@@ -470,67 +474,9 @@ SemVer SemVer::minimum(const SemVer& v1, const SemVer& v2) {
     return (v1 < v2) ? v1 : v2;
 }
 
-// WARNING: This function uses naive heuristic logic and may behave unpredictably with complex or malformed input.
-SemVer SemVer::coerce(const char* versionString) {
-    if (!versionString) return SemVer();
-    int start = -1;
-    for (int i = 0; versionString[i] != '\0'; i++) {
-        if (versionString[i] >= '0' && versionString[i] <= '9') {
-            start = i;
-            break;
-        }
-    }
-    if (start == -1) return SemVer();
 
-    const char* s = &versionString[start];
-    SemVer v(s);
-    if (v._valid) return v;
 
-    // Partial parse X.Y or X
-    int dot1 = findChar(s, '.');
-    if (dot1 == -1) {
-        int end = 0;
-        while(s[end] >= '0' && s[end] <= '9') end++;
-        if (end == 0) return SemVer();
-        SemVer res;
-        if (res.parseUint32(s, 0, end, res.major)) {
-            res.minor = 0; res.patch = 0; res._valid = true;
-            return res;
-        }
-        return SemVer();
-    }
 
-    int dot2 = findChar(s, '.', dot1 + 1);
-    if (dot2 == -1) {
-        int end = dot1 + 1;
-        while(s[end] >= '0' && s[end] <= '9') end++;
-        SemVer res;
-        if (res.parseUint32(s, 0, dot1, res.major) && res.parseUint32(s, dot1+1, end, res.minor)) {
-            res.patch = 0; res._valid = true;
-            int nextIdx = end;
-            if (s[nextIdx] == '-' || s[nextIdx] == '+') {
-                char tmp[MAX_VERSION_LEN+1];
-                size_t pos = 0;
-                for(int i=0; i<dot1; i++) tmp[pos++] = s[i];
-                tmp[pos++] = '.';
-                for(int i=dot1+1; i<end; i++) tmp[pos++] = s[i];
-                tmp[pos++] = '.'; tmp[pos++] = '0';
-                while(s[nextIdx] != '\0' && pos < MAX_VERSION_LEN) tmp[pos++] = s[nextIdx++];
-                tmp[pos] = '\0';
-                return SemVer(tmp);
-            }
-            return res;
-        }
-    }
-
-    return SemVer();
-}
-
-#ifdef ARDUINO
-SemVer SemVer::coerce(const String& versionString) {
-    return coerce(versionString.c_str());
-}
-#endif
 
 SemVer::DiffType SemVer::diff(const SemVer& other) const {
     if (!_valid || !other._valid) return NONE;
