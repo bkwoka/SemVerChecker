@@ -63,22 +63,27 @@ void setup() {
   Serial.println(available);
 
   // ============================================
-  // Pre-release Policy
+  // Device Configuration (Channel Policy)
   // ============================================
-  // Production devices skip pre-release versions
-  if (available.getPrerelease()[0] != '\0') {
-    Serial.print(F("⊘ SKIP: Pre-release version ("));
-    Serial.print(available.getPrerelease());
-    Serial.println(F(")"));
-    Serial.println(F("   Production devices use stable releases only."));
-    return;
+  enum Channel {
+    STABLE, // Production
+    BETA,   // Beta Testers
+    DEV     // Developers
+  };
+
+  Channel myChannel = STABLE; 
+  bool allowPrerelease = (myChannel == BETA || myChannel == DEV);
+
+  Serial.print(F("Device Channel: "));
+  switch(myChannel) {
+    case STABLE: Serial.println(F("STABLE")); break;
+    case BETA:   Serial.println(F("BETA")); break;
+    case DEV:    Serial.println(F("DEV")); break;
   }
 
   // ============================================
-  // Compatibility Check (NEW!)
+  // Compatibility Check
   // ============================================
-  // Check if new version is compatible with current
-  // Using satisfies() - smarter than simple comparison!
   
   Serial.println(F("\n--- Compatibility Analysis ---"));
   
@@ -101,14 +106,20 @@ void setup() {
   Serial.print(available);
   Serial.print(F(" satisfies "));
   Serial.print(current);
-  Serial.print(F("? "));
+  Serial.print(F(" (allowPrerelease="));
+  Serial.print(allowPrerelease ? "true" : "false");
+  Serial.print(F(")? "));
 
-  if (available.satisfies(current)) {
+  if (available.satisfies(current, allowPrerelease)) {
     Serial.println(F("YES ✓"));
-    Serial.println(F("   Safe to upgrade (backward compatible)"));
+    Serial.println(F("   Safe to upgrade (compatible & policy approved)"));
   } else {
     Serial.println(F("NO ✗"));
-    Serial.println(F("   Breaking changes detected!"));
+    if (available.getPrerelease()[0] != '\0' && !allowPrerelease) {
+       Serial.println(F("   REJECTED: Pre-release not allowed on STABLE channel"));
+    } else {
+       Serial.println(F("   Breaking changes or incompatible version detected!"));
+    }
     
     // Determine what changed
     SemVer::DiffType diff = current.diff(available);
@@ -125,6 +136,12 @@ void setup() {
   // ============================================
   Serial.println(F("\n--- Update Decision ---"));
   
+  // If not compatible, stop here (unless forced)
+  if (!available.satisfies(current, allowPrerelease)) {
+      Serial.println(F("Update Aborted: Version not compatible or allowed."));
+      return;
+  }
+
   SemVer::DiffType updateType = current.diff(available);
   
   Serial.print(F("Update type: "));

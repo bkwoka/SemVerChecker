@@ -420,7 +420,7 @@ bool SemVer::isUpgrade(const String& baseVersion, const String& newVersion) {
 }
 #endif
 
-bool SemVer::satisfies(const SemVer& requirement) const {
+bool SemVer::satisfies(const SemVer& requirement, bool includePrerelease) const {
     // Both versions must be valid
     if (!_valid || !requirement._valid) {
         return false;
@@ -441,6 +441,25 @@ bool SemVer::satisfies(const SemVer& requirement) const {
     // Anything MAY change at any time. The public API SHOULD NOT be considered stable."
     if (major == 0 && minor != requirement.minor) {
         return false;
+    }
+
+    // Check if candidate (this) is a pre-release version
+    bool iAmPrerelease = (getPrerelease()[0] != '\0');
+
+    if (iAmPrerelease) {
+        if (!includePrerelease) {
+            bool reqIsPrerelease = (requirement.getPrerelease()[0] != '\0');
+            
+            if (!reqIsPrerelease) {
+                return false;
+            }
+            
+            if (major != requirement.major || 
+                minor != requirement.minor || 
+                patch != requirement.patch) {
+                 return false; 
+            }
+        }
     }
 
     return true;

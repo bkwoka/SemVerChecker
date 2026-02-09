@@ -109,10 +109,33 @@ void setup() {
 
 
 
+
+  // ============================================
+  // 4. Detailed Compatibility Check
+  // ============================================
+  Serial.println(F("\n[4] COMPATIBILITY & SAFETY"));
+  Serial.println(F("----------------------------------------"));
+  
+  SemVer stableReq("1.0.0");
+  SemVer betaCand("1.1.0-beta");
+  
+  Serial.print(F("Requirement: ")); Serial.println(stableReq);
+  Serial.print(F("Candidate:   ")); Serial.println(betaCand);
+  
+  // Default check (Safe)
+  bool safeCheck = betaCand.satisfies(stableReq); 
+  Serial.print(F("  satisfies(req) -> ")); 
+  Serial.println(safeCheck ? F("YES") : F("NO (Safety First!)"));
+  
+  // Explicit check (Allow Pre-release)
+  bool explicitCheck = betaCand.satisfies(stableReq, true);
+  Serial.print(F("  satisfies(req, true) -> ")); 
+  Serial.println(explicitCheck ? F("YES (Explicit Allow)") : F("NO"));
+
   // ============================================
   // 5. Accessing Components
   // ============================================
-  Serial.println(F("\n[4] ACCESSING COMPONENTS"));
+  Serial.println(F("\n[5] ACCESSING COMPONENTS"));
   Serial.println(F("----------------------------------------"));
   
   SemVer complexVer("3.2.1-beta.5+build.789");

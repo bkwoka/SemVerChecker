@@ -50,10 +50,10 @@ public:
     /**
      * @brief Check if this version satisfies the requirement (Caret range logic)
      * @param requirement The required version to check against
+     * @param includePrerelease If true, allows unstable versions
      * @return true if this version is compatible with requirement
-     * @note Returns false if major differs, or if major==0 and minor differs
      */
-    bool satisfies(const SemVer& requirement) const;
+    bool satisfies(const SemVer& requirement, bool includePrerelease = false) const;
     
     /**
      * @brief Returns the maximum of two versions
