@@ -431,16 +431,22 @@ bool SemVer::satisfies(const SemVer& requirement, bool includePrerelease) const 
         return false;
     }
 
-    // Major version must match (SemVer breaking change rule)
+    // Major version must match
     if (major != requirement.major) {
         return false;
     }
 
-    // Special case for 0.x.x: minor version changes are also breaking
-    // Per SemVer spec: "Major version zero (0.y.z) is for initial development.
-    // Anything MAY change at any time. The public API SHOULD NOT be considered stable."
-    if (major == 0 && minor != requirement.minor) {
-        return false;
+    // Special case for 0.x.x
+    if (major == 0) {
+        // Minor version changes are breaking in 0.x.x
+        if (minor != requirement.minor) {
+            return false;
+        }
+
+        // For 0.0.x, patch changes are also breaking
+        if (minor == 0 && patch != requirement.patch) {
+            return false;
+        }
     }
 
     // Check if candidate (this) is a pre-release version
@@ -448,12 +454,19 @@ bool SemVer::satisfies(const SemVer& requirement, bool includePrerelease) const 
 
     if (iAmPrerelease) {
         if (!includePrerelease) {
+            // Check if strict match on tuple (major.minor.patch-prerelease)
+            // If requirement is NOT prerelease, we generally reject unless explicit opt-in.
+            // Exception: If requirement IS prerelease, and we matched major/minor/patch above,
+            // we are compatible because we are >= requirement.
+            
             bool reqIsPrerelease = (requirement.getPrerelease()[0] != '\0');
             
             if (!reqIsPrerelease) {
                 return false;
             }
             
+            // If requirement is also pre-release, we must match the same tuple
+            // e.g. ^1.2.3-alpha allows 1.2.3-beta, but NOT 1.2.4-beta
             if (major != requirement.major || 
                 minor != requirement.minor || 
                 patch != requirement.patch) {

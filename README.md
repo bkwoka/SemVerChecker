@@ -93,8 +93,13 @@ void setup() {
 **Special 0.x.x handling:**
 
 ```cpp
+// 0.1.x - 0.9.x behavior (Minor is breaking)
 SemVer("0.2.5").satisfies(SemVer("0.2.0"));  // ✓ true (patch OK)
-SemVer("0.3.0").satisfies(SemVer("0.2.0"));  // ✗ false (minor breaking in 0.x.x!)
+SemVer("0.3.0").satisfies(SemVer("0.2.0"));  // ✗ false (minor breaking!)
+
+// 0.0.x behavior (Strict: Patch is breaking)
+SemVer("0.0.2").satisfies(SemVer("0.0.1"));  // ✗ false (patch breaking in 0.0.x!)
+SemVer("0.0.1+build").satisfies(SemVer("0.0.1")); // ✓ true
 ```
 
 ### Safe Pre-release Handling

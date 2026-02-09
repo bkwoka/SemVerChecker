@@ -489,7 +489,54 @@ int main() {
         // Test 0.0.x special case
         SemVer current("0.0.5");
         SemVer required("0.0.1");
-        assert(current.satisfies(required), "satisfies: 0.0.5 satisfies 0.0.1 (same 0.0.x)");
+        assert(!current.satisfies(required), "satisfies: 0.0.5 does NOT satisfy 0.0.1 (Strict 0.0.x)");
+    }
+    {
+        // Test 0.0.x strict caret behavior
+        // ^0.0.1 := >=0.0.1 <0.0.2
+        SemVer req("0.0.1");
+        
+        SemVer v1("0.0.1"); // Match
+        SemVer v2("0.0.2"); // Fail
+        SemVer v3("0.0.1+build"); // Match
+        
+        assert(v1.satisfies(req), "satisfies: 0.0.1 satisfies 0.0.1");
+        assert(!v2.satisfies(req), "satisfies: 0.0.2 does NOT satisfy ^0.0.1");
+        assert(v3.satisfies(req), "satisfies: 0.0.1+build satisfies 0.0.1");
+    }
+    {
+        // Extended 0.0.x Edge Cases
+        SemVer req("0.0.5");
+        assert(SemVer("0.0.5").satisfies(req), "0.0.5 satisfies 0.0.5");
+        assert(!SemVer("0.0.6").satisfies(req), "0.0.6 does NOT satisfy 0.0.5 (Patch breaking)");
+        assert(!SemVer("0.1.0").satisfies(req), "0.1.0 does NOT satisfy 0.0.5 (Minor breaking)");
+        assert(SemVer("0.0.5+meta").satisfies(req), "0.0.5+meta satisfies 0.0.5");
+    }
+    {
+        // Test 0.1.x behavior (Minor is breaking, Patch is OK)
+        // ^0.1.0 := >=0.1.0 <0.2.0
+        SemVer req("0.1.0");
+        SemVer v1("0.1.1"); // OK
+        SemVer v2("0.2.0"); // Fail
+        
+        assert(v1.satisfies(req), "satisfies: 0.1.1 satisfies ^0.1.0");
+        assert(!v2.satisfies(req), "satisfies: 0.2.0 does NOT satisfy ^0.1.0");
+    }
+    {
+        // Extended 0.1.x Edge Cases
+        SemVer req("0.1.5");
+        assert(SemVer("0.1.6").satisfies(req), "0.1.6 satisfies 0.1.5 (Patch update safe for 0.1.x)");
+        assert(!SemVer("0.2.0").satisfies(req), "0.2.0 does NOT satisfy 0.1.5 (Minor breaking)");
+        assert(!SemVer("0.1.4").satisfies(req), "0.1.4 does NOT satisfy 0.1.5 (Too old)");
+    }
+    {
+        // 0.0.x Pre-release interactions
+        SemVer req("0.0.1-alpha");
+        assert(SemVer("0.0.1-alpha").satisfies(req), "0.0.1-alpha satisfies 0.0.1-alpha");
+        assert(SemVer("0.0.1-alpha.1").satisfies(req), "0.0.1-alpha.1 satisfies 0.0.1-alpha");
+        
+        // Stable satisfies pre-release if it's an upgrade
+        assert(SemVer("0.0.1").satisfies(req), "0.0.1 (stable) satisfies 0.0.1-alpha");
     }
 
     std::cout << "\n--- Pre-release Compliance Tests ---" << std::endl;
