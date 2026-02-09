@@ -13,6 +13,7 @@ A lightweight Semantic Versioning (SemVer 2.0.0) parser and checker for Arduino 
 - **Full SemVer 2.0.0 Support**: Handles major, minor, patch, pre-release identifiers, and build metadata.
 - **Arduino Printable Interface**: Direct printing to Serial/LCD/OLED without String allocation.
 - **Smart Compatibility Checking**: `satisfies()` implements caret range logic with 0.x.x handling.
+- **Safety First**: Optional strict pre-release protection prevents accidental upgrades to unstable versions.
 - **Version Comparison Helpers**: `maximum()` and `minimum()` static methods for finding latest/oldest versions.
 - **Configurable Buffer Size**: Adjust via build flags for your project needs.
 - **Robust Validation**: Enforces strict SemVer rules (no leading zeros, character set validation) to prevent security issues.
@@ -94,6 +95,27 @@ void setup() {
 ```cpp
 SemVer("0.2.5").satisfies(SemVer("0.2.0"));  // ✓ true (patch OK)
 SemVer("0.3.0").satisfies(SemVer("0.2.0"));  // ✗ false (minor breaking in 0.x.x!)
+```
+
+### Safe Pre-release Handling
+
+By default, `satisfies()` enforces a **Safety First** policy: if the `requirement` is a stable version (e.g., `1.0.0`), it will **reject** any pre-release versions (e.g., `1.1.0-beta`), even if they are technically newer.
+
+To allow pre-releases (e.g., for a "Beta" channel), pass `true` as the second argument:
+
+```cpp
+SemVer requirement("1.0.0");
+SemVer candidate("1.1.0-beta");
+
+// Default: Safe for Production
+if (candidate.satisfies(requirement)) {
+    // WON'T enter here (candidate rejected)
+}
+
+// Explicit: Beta Channel
+if (candidate.satisfies(requirement, true)) {
+    // WILL enter here (candidate accepted)
+}
 ```
 
 ### Finding Latest/Oldest Versions
@@ -255,7 +277,6 @@ The project includes comprehensive unit tests covering:
 - Precedence rules
 - Pre-release handling
 - All library features
-- 184 test cases - all passing ✅
 
 ### Run Native Tests (Linux/macOS/WSL)
 

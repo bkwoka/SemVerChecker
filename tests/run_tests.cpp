@@ -492,6 +492,80 @@ int main() {
         assert(current.satisfies(required), "satisfies: 0.0.5 satisfies 0.0.1 (same 0.0.x)");
     }
 
+    std::cout << "\n--- Pre-release Compliance Tests ---" << std::endl;
+    {
+        SemVer req("1.0.0");
+        SemVer cand("1.1.0");
+        assert(cand.satisfies(req), "Stable candidate satisfies stable requirement");
+    }
+    {
+        SemVer req("1.0.0");
+        SemVer cand("1.1.0-beta");
+        assert(!cand.satisfies(req), "Pre-release candidate REJECTED by stable requirment (default)");
+    }
+    {
+        SemVer req("1.0.0");
+        SemVer cand("1.1.0-beta");
+        assert(cand.satisfies(req, true), "Pre-release candidate ACCEPTED when includePrerelease=true");
+    }
+    {
+        SemVer req("1.0.0-alpha");
+        SemVer cand("1.0.0-beta");
+        assert(cand.satisfies(req), "Pre-release satisfies Pre-release requirement (same tuple)");
+    }
+    {
+        SemVer req("1.0.0-alpha");
+        SemVer cand("1.0.1-beta"); 
+        assert(!cand.satisfies(req), "Pre-release candidate REJECTED if tuple differs from pre-release requirement");
+    }
+    {
+        SemVer req("1.0.0-alpha");
+        SemVer cand("1.0.0-alpha");
+        assert(cand.satisfies(req), "Exact pre-release match accepted");
+    }
+    {
+        SemVer req("1.0.0-beta");
+        SemVer cand("1.0.0-alpha");
+        assert(!cand.satisfies(req), "Lower precedence pre-release rejected (< requirement)");
+    }
+
+    std::cout << "\n--- Pessimistic & Malicious Input Tests ---" << std::endl;
+    {
+        // Malformed strings that might confuse parsers
+        SemVer v("1.2.3-alpha+build...meta"); 
+        assert(!v.isValid(), "Reject triple dot in build metadata");
+    }
+    {
+        SemVer v("1.2.3-."); 
+        assert(!v.isValid(), "Reject dot immediately after hyphen");
+    }
+    {
+        // Check integer overflow protection during parsing
+        // 4294967296 is 2^32, just above uint32_t max
+        SemVer v("4294967296.0.0");
+        assert(!v.isValid(), "Reject major version overflow");
+    }
+    {
+        // Check very long numeric segment (potential buffer overflow if not handled)
+        // 50 digits
+        SemVer v("12345678901234567890123456789012345678901234567890.0.0");
+        assert(!v.isValid(), "Reject overly long numeric segment");
+    }
+    {
+         // Satisfies with invalid versions should always fail safely
+         SemVer vInvalid("invalid");
+         SemVer vValid("1.0.0");
+         assert(!vInvalid.satisfies(vValid), "Invalid candidate never satisfies");
+         assert(!vValid.satisfies(vInvalid), "Valid candidate never satisfies invalid requirement");
+    }
+    {
+        // Test strict boolean flag logic
+        SemVer v1("1.0.0-alpha");
+        SemVer v2("1.0.0");
+        // Passing 'true' to includePrerelease shouldn't magically make a lower version satisfy a higher one
+        assert(!v1.satisfies(v2, true), "Pre-release < Stable still fails even with includePrerelease=true");
+    }
+
     std::cout << "\n--- max() and min() Tests ---" << std::endl;
     {
         // Test max with clear difference
