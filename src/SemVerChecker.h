@@ -8,7 +8,11 @@
 #include <Arduino.h>
 #endif
 
+#ifdef ARDUINO
+class SemVer : public Printable {
+#else
 class SemVer {
+#endif
 public:
     // Use uint32_t per SemVer spec (non-negative integers)
     uint32_t major;
@@ -16,7 +20,11 @@ public:
     uint32_t patch;
 
     // Length limit for security (protection against DoS/memory exhaustion)
-    static const size_t MAX_VERSION_LEN = 64; 
+    // Can be configured via build flags: -DSEMVER_MAX_LENGTH=128
+#ifndef SEMVER_MAX_LENGTH
+#define SEMVER_MAX_LENGTH 64
+#endif
+    static const size_t MAX_VERSION_LEN = SEMVER_MAX_LENGTH; 
 
     SemVer();
     explicit SemVer(const char* versionString);
@@ -30,7 +38,38 @@ public:
     void toString(char* buffer, size_t len) const;
 #ifdef ARDUINO
     String toString() const;
+    
+    /**
+     * @brief Printable interface implementation for Arduino Serial output
+     * @param p Print object (e.g., Serial)
+     * @return Number of bytes written
+     */
+    virtual size_t printTo(Print& p) const;
 #endif
+    
+    /**
+     * @brief Check if this version satisfies the requirement (Caret range logic)
+     * @param requirement The required version to check against
+     * @return true if this version is compatible with requirement
+     * @note Returns false if major differs, or if major==0 and minor differs
+     */
+    bool satisfies(const SemVer& requirement) const;
+    
+    /**
+     * @brief Returns the maximum of two versions
+     * @param v1 First version
+     * @param v2 Second version
+     * @return The larger version, or the valid one if only one is valid
+     */
+    static SemVer maximum(const SemVer& v1, const SemVer& v2);
+    
+    /**
+     * @brief Returns the minimum of two versions
+     * @param v1 First version
+     * @param v2 Second version
+     * @return The smaller version, or the valid one if only one is valid
+     */
+    static SemVer minimum(const SemVer& v1, const SemVer& v2);
 
     // Getters for metadata (returns pointers to internal buffer)
     const char* getPrerelease() const;

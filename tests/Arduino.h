@@ -7,6 +7,64 @@
 #include <cctype>
 #include <vector>
 
+// Mock for Arduino Print class
+class Print {
+public:
+    virtual ~Print() {}
+    
+    // Print single character
+    virtual size_t print(char c) {
+        std::cout << c;
+        return 1;
+    }
+    
+    // Print C-string
+    virtual size_t print(const char* s) {
+        if (!s) return 0;
+        size_t len = 0;
+        while (s[len]) {
+            std::cout << s[len];
+            len++;
+        }
+        return len;
+    }
+    
+    // Print unsigned int
+    virtual size_t print(unsigned int n) {
+        std::string s = std::to_string(n);
+        std::cout << s;
+        return s.length();
+    }
+    
+    // Print int
+    virtual size_t print(int n) {
+        std::string s = std::to_string(n);
+        std::cout << s;
+        return s.length();
+    }
+    
+    // Print unsigned long
+    virtual size_t print(unsigned long n) {
+        std::string s = std::to_string(n);
+        std::cout << s;
+        return s.length();
+    }
+    
+    // Print long
+    virtual size_t print(long n) {
+        std::string s = std::to_string(n);
+        std::cout << s;
+        return s.length();
+    }
+};
+
+// Mock for Arduino Printable interface
+class Printable {
+public:
+    virtual ~Printable() {}
+    virtual size_t printTo(Print& p) const = 0;
+};
+
 // Mock for Arduino String class
 class String {
 public:

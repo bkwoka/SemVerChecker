@@ -310,7 +310,59 @@ String SemVer::toString() const {
     toString(buf, sizeof(buf));
     return String(buf);
 }
+
+size_t SemVer::printTo(Print& p) const {
+    if (!_valid) {
+        return p.print("invalid");
+    }
+
+    // Write version components directly to Print stream
+    // This avoids creating temporary String objects
+    size_t n = 0;
+
+    // Helper lambda to write uint32_t
+    auto writeNum = [&p, &n](uint32_t num) {
+        if (num == 0) {
+            n += p.print('0');
+            return;
+        }
+        char temp[11]; // max uint32 is 10 digits
+        int i = 0;
+        while (num > 0) {
+            temp[i++] = (num % 10) + '0';
+            num /= 10;
+        }
+        // Write in reverse order
+        while (i > 0) {
+            n += p.print(temp[--i]);
+        }
+    };
+
+    // Write major.minor.patch
+    writeNum(major);
+    n += p.print('.');
+    writeNum(minor);
+    n += p.print('.');
+    writeNum(patch);
+
+    // Write prerelease if present
+    const char* pre = getPrerelease();
+    if (pre[0] != '\0') {
+        n += p.print('-');
+        n += p.print(pre);
+    }
+
+    // Write build metadata if present
+    const char* bld = getBuild();
+    if (bld[0] != '\0') {
+        n += p.print('+');
+        n += p.print(bld);
+    }
+
+    return n;
+}
 #endif
+
 
 bool SemVer::operator==(const SemVer& other) const {
     if (!_valid || !other._valid) return false;
@@ -363,6 +415,60 @@ bool SemVer::isUpgrade(const String& baseVersion, const String& newVersion) {
     return isUpgrade(baseVersion.c_str(), newVersion.c_str());
 }
 #endif
+
+bool SemVer::satisfies(const SemVer& requirement) const {
+    // Both versions must be valid
+    if (!_valid || !requirement._valid) {
+        return false;
+    }
+
+    // Version must be >= requirement
+    if (*this < requirement) {
+        return false;
+    }
+
+    // Major version must match (SemVer breaking change rule)
+    if (major != requirement.major) {
+        return false;
+    }
+
+    // Special case for 0.x.x: minor version changes are also breaking
+    // Per SemVer spec: "Major version zero (0.y.z) is for initial development.
+    // Anything MAY change at any time. The public API SHOULD NOT be considered stable."
+    if (major == 0 && minor != requirement.minor) {
+        return false;
+    }
+
+    return true;
+}
+
+SemVer SemVer::maximum(const SemVer& v1, const SemVer& v2) {
+    // If both invalid, return invalid
+    if (!v1._valid && !v2._valid) {
+        return SemVer();
+    }
+    
+    // If one is invalid, return the valid one
+    if (!v1._valid) return v2;
+    if (!v2._valid) return v1;
+    
+    // Both valid, return the greater one
+    return (v1 > v2) ? v1 : v2;
+}
+
+SemVer SemVer::minimum(const SemVer& v1, const SemVer& v2) {
+    // If both invalid, return invalid
+    if (!v1._valid && !v2._valid) {
+        return SemVer();
+    }
+    
+    // If one is invalid, return the valid one
+    if (!v1._valid) return v2;
+    if (!v2._valid) return v1;
+    
+    // Both valid, return the lesser one
+    return (v1 < v2) ? v1 : v2;
+}
 
 // WARNING: This function uses naive heuristic logic and may behave unpredictably with complex or malformed input.
 SemVer SemVer::coerce(const char* versionString) {

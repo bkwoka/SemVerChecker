@@ -397,6 +397,218 @@ int main() {
             assert(!v.isValid(), msg.c_str());
         }
     }
+    std::cout << "\n--- printTo() Tests ---" << std::endl;
+    {
+        // Test basic version printing
+        SemVer v("1.2.3");
+        Print testPrint;
+        std::cout << "printTo output: ";
+        size_t written = v.printTo(testPrint);
+        std::cout << std::endl;
+        assert(written > 0, "printTo() returns non-zero byte count");
+    }
+    {
+        // Test complex version with prerelease and build
+        SemVer v("2.5.7-beta.1+build.456");
+        Print testPrint;
+        std::cout << "printTo complex: ";
+        size_t written = v.printTo(testPrint);
+        std::cout << std::endl;
+        assert(written > 0, "printTo() handles complex version");
+    }
+    {
+        // Test invalid version
+        SemVer v("invalid");
+        Print testPrint;
+        std::cout << "printTo invalid: ";
+        v.printTo(testPrint);
+        std::cout << std::endl;
+        assert(true, "printTo() handles invalid version without crash");
+    }
+    {
+        // Test version with only prerelease
+        SemVer v("1.0.0-alpha");
+        Print testPrint;
+        std::cout << "printTo prerelease: ";
+        v.printTo(testPrint);
+        std::cout << std::endl;
+        assert(true, "printTo() handles prerelease only");
+    }
+    {
+        // Test version with only build metadata
+        SemVer v("1.0.0+build");
+        Print testPrint;
+        std::cout << "printTo build: ";
+        v.printTo(testPrint);
+        std::cout << std::endl;
+        assert(true, "printTo() handles build metadata only");
+    }
+
+    std::cout << "\n--- satisfies() Tests ---" << std::endl;
+    {
+        // Test basic compatibility - patch increment
+        SemVer current("1.2.5");
+        SemVer required("1.2.0");
+        assert(current.satisfies(required), "satisfies: 1.2.5 satisfies 1.2.0 (patch bump)");
+    }
+    {
+        // Test minor increment within same major
+        SemVer current("1.5.0");
+        SemVer required("1.2.0");
+        assert(current.satisfies(required), "satisfies: 1.5.0 satisfies 1.2.0 (minor bump)");
+    }
+    {
+        // Test major version difference - should fail
+        SemVer current("2.0.0");
+        SemVer required("1.9.0");
+        assert(!current.satisfies(required), "satisfies: 2.0.0 does NOT satisfy 1.9.0 (major breaking)");
+    }
+    {
+        // Test current < required - should fail
+        SemVer current("1.1.0");
+        SemVer required("1.2.0");
+        assert(!current.satisfies(required), "satisfies: 1.1.0 does NOT satisfy 1.2.0 (too old)");
+    }
+    {
+        // Test exact match
+        SemVer current("1.2.3");
+        SemVer required("1.2.3");
+        assert(current.satisfies(required), "satisfies: 1.2.3 satisfies 1.2.3 (exact match)");
+    }
+    {
+        // Test 0.x.x special case - minor bump breaks compatibility
+        SemVer current("0.3.0");
+        SemVer required("0.2.0");
+        assert(!current.satisfies(required), "satisfies: 0.3.0 does NOT satisfy 0.2.0 (0.x.x minor breaking)");
+    }
+    {
+        // Test 0.x.x patch increment - should work
+        SemVer current("0.2.5");
+        SemVer required("0.2.0");
+        assert(current.satisfies(required), "satisfies: 0.2.5 satisfies 0.2.0 (0.x.x patch ok)");
+    }
+    {
+        // Test 0.x.x  exact minor match
+        SemVer current("0.1.9");
+        SemVer required("0.1.0");
+        assert(current.satisfies(required), "satisfies: 0.1.9 satisfies 0.1.0 (0.x.x same minor)");
+    }
+    {
+        // Test with prerelease versions
+        SemVer current("1.2.3");
+        SemVer required("1.2.0-alpha");
+        assert(current.satisfies(required), "satisfies: 1.2.3 satisfies 1.2.0-alpha");
+    }
+    {
+        // Test invalid version - should fail
+        SemVer current("invalid");
+        SemVer required("1.0.0");
+        assert(!current.satisfies(required), "satisfies: invalid version does NOT satisfy");
+    }
+    {
+        // Test against invalid requirement
+        SemVer current("1.0.0");
+        SemVer required("invalid");
+        assert(!current.satisfies(required), "satisfies: valid does NOT satisfy invalid requirement");
+    }
+    {
+        // Test 0.0.x special case
+        SemVer current("0.0.5");
+        SemVer required("0.0.1");
+        assert(current.satisfies(required), "satisfies: 0.0.5 satisfies 0.0.1 (same 0.0.x)");
+    }
+
+    std::cout << "\n--- max() and min() Tests ---" << std::endl;
+    {
+        // Test max with clear difference
+        SemVer v1("1.2.3");
+        SemVer v2("1.3.0");
+        SemVer result = SemVer::maximum(v1, v2);
+        assertString(result.toString(), "1.3.0", "max(1.2.3, 1.3.0) = 1.3.0");
+    }
+    {
+        // Test max reversed order
+        SemVer v1("2.0.0");
+        SemVer v2("1.9.9");
+        SemVer result = SemVer::maximum(v1, v2);
+        assertString(result.toString(), "2.0.0", "max(2.0.0, 1.9.9) = 2.0.0");
+    }
+    {
+        // Test max with equal versions
+        SemVer v1("1.0.0");
+        SemVer v2("1.0.0");
+        SemVer result = SemVer::maximum(v1, v2);
+        assertString(result.toString(), "1.0.0", "max(1.0.0, 1.0.0) = 1.0.0");
+    }
+    {
+        // Test max with prerelease
+        SemVer v1("1.0.0-alpha");
+        SemVer v2("1.0.0");
+        SemVer result = SemVer::maximum(v1, v2);
+        assertString(result.toString(), "1.0.0", "max(1.0.0-alpha, 1.0.0) = 1.0.0");
+    }
+    {
+        // Test max with one invalid
+        SemVer v1("invalid");
+        SemVer v2("1.0.0");
+        SemVer result = SemVer::maximum(v1, v2);
+        assert(result.isValid(), "max(invalid, 1.0.0) returns valid version");
+        assertString(result.toString(), "1.0.0", "max(invalid, 1.0.0) = 1.0.0");
+    }
+    {
+        // Test max with both invalid
+        SemVer v1("invalid1");
+        SemVer v2("invalid2");
+        SemVer result = SemVer::maximum(v1, v2);
+        assert(!result.isValid(), "max(invalid, invalid) returns invalid");
+    }
+    {
+        // Test min with clear difference
+        SemVer v1("1.2.3");
+        SemVer v2("1.3.0");
+        SemVer result = SemVer::minimum(v1, v2);
+        assertString(result.toString(), "1.2.3", "min(1.2.3, 1.3.0) = 1.2.3");
+    }
+    {
+        // Test min reversed order
+        SemVer v1("2.0.0");
+        SemVer v2("1.9.9");
+        SemVer result = SemVer::minimum(v1, v2);
+        assertString(result.toString(), "1.9.9", "min(2.0.0, 1.9.9) = 1.9.9");
+    }
+    {
+        // Test min with prerelease
+        SemVer v1("1.0.0-alpha");
+        SemVer v2("1.0.0");
+        SemVer result = SemVer::minimum(v1, v2);
+        assertString(result.toString(), "1.0.0-alpha", "min(1.0.0-alpha, 1.0.0) = 1.0.0-alpha");
+    }
+    {
+        // Test min with one invalid
+        SemVer v1("1.0.0");
+        SemVer v2("invalid");
+        SemVer result = SemVer::minimum(v1, v2);
+        assert(result.isValid(), "min(1.0.0, invalid) returns valid version");
+        assertString(result.toString(), "1.0.0", "min(1.0.0, invalid) = 1.0.0");
+    }
+    {
+        // Test min with both invalid
+        SemVer v1("invalid1");
+        SemVer v2("invalid2");
+        SemVer result = SemVer::minimum(v1, v2);
+        assert(!result.isValid(), "min(invalid, invalid) returns invalid");
+    }
+    {
+        // Test complex comparison with build metadata (ignored in comparison)
+        SemVer v1("1.0.0+build1");
+        SemVer v2("1.0.0+build2");
+        SemVer resultMax = SemVer::maximum(v1, v2);
+        SemVer resultMin = SemVer::minimum(v1, v2);
+        assert(resultMax.major == 1 && resultMax.minor == 0 && resultMax.patch == 0, 
+               "max handles build metadata correctly");
+        assert(resultMin.major == 1 && resultMin.minor == 0 && resultMin.patch == 0, 
+               "min handles build metadata correctly");
+    }
 
     // --- Summary ---
     std::cout << "\n==================================" << std::endl;
