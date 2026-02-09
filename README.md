@@ -1,7 +1,8 @@
 # SemVerChecker
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/bkwoka/SemVerChecker)](https://github.com/bkwoka/SemVerChecker/releases)
-[![Arduino Library Registry](https://www.arduinosvg.com/badge/SemVerChecker.svg)](https://www.arduino.cc/reference/en/libraries/semverchecker/)
+[![Arduino Library Registry](https://img.shields.io/badge/Arduino_Library-SemVerChecker-teal.svg)](https://www.arduino.cc/reference/en/libraries/semverchecker/)
+[![PlatformIO Registry](https://img.shields.io/badge/PlatformIO-SemVerChecker-orange?logo=platformio)](https://registry.platformio.org/libraries/bkwoka/SemVerChecker)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A lightweight Semantic Versioning (SemVer 2.0.0) parser and checker for Arduino and ESP32, etc. platforms.
