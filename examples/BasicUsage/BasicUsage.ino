@@ -7,7 +7,7 @@
   - Direct printing with Printable interface (NEW!)
   - Comparing versions
   - Pre-release precedence
-  - Using coerce() to handle partial/loose inputs
+
   
   Hardware: Any Arduino board with Serial support
   
@@ -107,37 +107,12 @@ void setup() {
   Serial.print(F(" ? "));
   Serial.println((vBeta < v1) ? F("YES ✓") : F("NO"));
 
-  // ============================================
-  // 4. Coercion (Loose Parsing)
-  // ============================================
-  Serial.println(F("\n[4] COERCION (LOOSE PARSING)"));
-  Serial.println(F("----------------------------------------"));
-  Serial.println(F("  Handles partial or prefixed versions:"));
-  
-  const char* looseInputs[] = {
-    "v1.2.3",      // "v" prefix
-    "1.2",         // Partial (missing patch)
-    "1",           // Just major
-    "v2.0-rc.1"    // Prefix + prerelease
-  };
 
-  for (const char* input : looseInputs) {
-    SemVer v = SemVer::coerce(input);
-    Serial.print(F("  '"));
-    Serial.print(input);
-    Serial.print(F("' → "));
-    
-    if (v.isValid()) {
-      Serial.println(v);
-    } else {
-      Serial.println(F("FAILED"));
-    }
-  }
 
   // ============================================
   // 5. Accessing Components
   // ============================================
-  Serial.println(F("\n[5] ACCESSING COMPONENTS"));
+  Serial.println(F("\n[4] ACCESSING COMPONENTS"));
   Serial.println(F("----------------------------------------"));
   
   SemVer complexVer("3.2.1-beta.5+build.789");

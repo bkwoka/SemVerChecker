@@ -16,7 +16,7 @@ A lightweight Semantic Versioning (SemVer 2.0.0) parser and checker for Arduino 
 - **Version Comparison Helpers**: `maximum()` and `minimum()` static methods for finding latest/oldest versions.
 - **Configurable Buffer Size**: Adjust via build flags for your project needs.
 - **Robust Validation**: Enforces strict SemVer rules (no leading zeros, character set validation) to prevent security issues.
-- **Loose Parsing (`coerce`)**: Can parse non-standard input like `v1.2` or `1.0` into valid SemVer objects.
+
 - **Comparison Operators**: Easy-to-use operators (`<`, `<=`, `==`, `>=`, `>`, `!=`).
 - **Memory Efficient**: Minimal footprint, suitable for extremely constrained embedded systems (AVR).
 - **Portable**: C++ core with optional Arduino wrappers (can be used in non-Arduino environments).
@@ -136,22 +136,6 @@ void setup() {
 }
 ```
 
-### Flexible Parsing (`coerce`)
-
-Handle "dirty" or partial inputs from user/API:
-
-```cpp
-SemVer v = SemVer::coerce("v1.2");
-// Parses as 1.2.0
-
-SemVer v2 = SemVer::coerce("2");
-// Parses as 2.0.0
-
-if (v.isValid()) {
-    Serial.println(v);  // Direct print!
-}
-```
-
 ### Upgrade Checking
 
 ```cpp
@@ -243,7 +227,7 @@ Trade-offs:
 #### Static Helpers
 
 - `static bool isUpgrade(const char* base, const char* next)`: Check if `next` is an upgrade over `base`
-- `static SemVer coerce(const char* versionString)`: Attempt to clean and parse non-standard version string
+
 - Arduino String variants available when `ARDUINO` is defined
 
 #### Constants
@@ -271,7 +255,7 @@ The project includes comprehensive unit tests covering:
 - Precedence rules
 - Pre-release handling
 - All library features
-- 197 test cases - all passing ✅
+- 184 test cases - all passing ✅
 
 ### Run Native Tests (Linux/macOS/WSL)
 
@@ -286,16 +270,16 @@ wsl -e bash -c "g++ -Itests -Isrc tests/run_tests.cpp -o tests/run_tests && ./te
 
 ## Memory Footprint
 
-**Object size:** 81 bytes per `SemVer` instance
+**Object size:** 82 bytes per `SemVer` instance
 
 - `uint32_t major, minor, patch`: 12 bytes
-- `char _buffer[MAX_VERSION_LEN]`: 64 bytes (default, configurable)
-- Metadata: 5 bytes
+- `char _buffer[MAX_VERSION_LEN + 1]`: 65 bytes (default 64 char + null terminator)
+- Metadata (`_preOffset`, `_buildOffset`, `_valid`): 5 bytes
 
-**Code size:** ~10KB Flash (with all features)
+**Code size:** ~8-9KB Flash (with all features)
 
 - With `-ffunction-sections -Wl,--gc-sections`: only used methods included
-- Typical impact on ATmega328P (32KB): ~3%
+- Typical impact on ATmega328P (32KB): ~2-3%
 - On ESP32 (4MB): negligible
 
 **Zero heap allocation** - all operations use stack or internal buffer
