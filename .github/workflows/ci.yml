@@ -34,14 +34,14 @@ jobs:
       - name: Compile FirmwareUpdate
         run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/FirmwareUpdate/FirmwareUpdate.ino
 
-      - name: Compile APICompatibility
-        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/APICompatibility/APICompatibility.ino
+      - name: Compile PrintableIntegration
+        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/PrintableIntegration/PrintableIntegration.ino
 
-      - name: Compile ConfigMigration
-        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/ConfigMigration/ConfigMigration.ino
+      - name: Compile DependencyManagement
+        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/DependencyManagement/DependencyManagement.ino
 
-      - name: Compile Testing
-        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/Testing/Testing.ino
+      - name: Compile VersionComparison
+        run: arduino-cli compile --fqbn arduino:avr:uno --libraries . examples/VersionComparison/VersionComparison.ino
 
   lint:
     name: Lint Library
