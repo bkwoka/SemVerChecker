@@ -227,8 +227,8 @@ Trade-offs:
 
 #### Version Helpers
 
-- `static SemVer max(const SemVer& v1, const SemVer& v2)`: Return greater version
-- `static SemVer min(const SemVer& v1, const SemVer& v2)`: Return lesser version
+- `static SemVer maximum(const SemVer& v1, const SemVer& v2)`: Return greater version
+- `static SemVer minimum(const SemVer& v1, const SemVer& v2)`: Return lesser version
 
 #### Analysis
 
