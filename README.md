@@ -5,7 +5,7 @@
 [![PlatformIO Registry](https://img.shields.io/badge/PlatformIO-SemVerChecker-orange?logo=platformio)](https://registry.platformio.org/libraries/bkwoka/SemVerChecker)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A lightweight Semantic Versioning (SemVer 2.0.0) parser and checker for Arduino and ESP32 platforms with zero-allocation architecture.
+A lightweight Semantic Versioning (SemVer 2.0.0) parser and checker for any platform with C++11 support (Arduino, ESP, etc.) featuring a zero-allocation architecture.
 
 ## Features
 
