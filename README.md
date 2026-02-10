@@ -286,12 +286,12 @@ The project includes comprehensive unit tests covering:
 ### Run Native Tests (Linux/macOS/WSL)
 
 ```bash
-# Using g++
+# Using g++ (Linux/macOS)
 cd tests
-g++ -Itests -Isrc run_tests.cpp -o run_tests && ./run_tests
+g++ -DARDUINO=100 -Itests -Isrc run_tests.cpp -o run_tests && ./run_tests
 
 # Or via WSL on Windows
-wsl -e bash -c "g++ -Itests -Isrc tests/run_tests.cpp -o tests/run_tests && ./tests/run_tests"
+wsl -e bash -c "g++ -DARDUINO=100 -Itests -Isrc tests/run_tests.cpp -o tests/run_tests && ./tests/run_tests"
 ```
 
 ## Memory Footprint
