@@ -44,7 +44,7 @@ public:
      * @param p Print object (e.g., Serial)
      * @return Number of bytes written
      */
-    virtual size_t printTo(Print& p) const;
+    virtual size_t printTo(Print& p) const override;
 #endif
     
     /**
