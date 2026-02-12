@@ -1,0 +1,46 @@
+#######################################
+# Syntax Coloring Map for SemVerChecker
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+SemVer	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+isValid	KEYWORD2
+toString	KEYWORD2
+printTo	KEYWORD2
+satisfies	KEYWORD2
+maximum	KEYWORD2
+minimum	KEYWORD2
+getPrerelease	KEYWORD2
+getBuild	KEYWORD2
+diff	KEYWORD2
+isUpgrade	KEYWORD2
+incMajor	KEYWORD2
+incMinor	KEYWORD2
+incPatch	KEYWORD2
+
+#######################################
+# Public Members (KEYWORD2)
+#######################################
+
+major	KEYWORD2
+minor	KEYWORD2
+patch	KEYWORD2
+
+#######################################
+# Constants and Enums (LITERAL1)
+#######################################
+
+MAX_VERSION_LEN	LITERAL1
+NONE	LITERAL1
+MAJOR	LITERAL1
+MINOR	LITERAL1
+PATCH	LITERAL1
+PRERELEASE	LITERAL1
