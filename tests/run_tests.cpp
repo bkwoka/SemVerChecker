@@ -705,6 +705,135 @@ int main() {
                "min handles build metadata correctly");
     }
 
+        // --- Additional Overflow Combination Tests ---
+    std::cout << "\n--- Additional Overflow Combination Tests ---" << std::endl;
+    {
+        // All fields at UINT32_MAX - should be valid
+        SemVer v("4294967295.4294967295.4294967295");
+        assert(v.isValid(), "All fields UINT32_MAX valid");
+        assertEqual(v.major, 4294967295UL, "Major UINT32_MAX");
+        assertEqual(v.minor, 4294967295UL, "Minor UINT32_MAX");
+        assertEqual(v.patch, 4294967295UL, "Patch UINT32_MAX");
+    }
+    {
+        // Overflow in multiple fields
+        SemVer v("4294967296.0.4294967296");
+        assert(!v.isValid(), "Multiple overflows (major and patch) invalid");
+    }
+    {
+        // Overflow with pre-release
+        SemVer v("4294967296.0.0-alpha");
+        assert(!v.isValid(), "Overflow in major with pre-release invalid");
+    }
+
+    // --- Long Pre-release and Build Segments Tests ---
+    std::cout << "\n--- Long Pre-release and Build Segments Tests ---" << std::endl;
+    {
+        // Long single pre-release segment (assume MAX per token ~64 chars)
+        String longPre = "1.0.0-";
+        for(int i = 0; i < 100; i++) longPre += "a";
+        SemVer v(longPre.c_str());
+        assert(!v.isValid(), "Overly long single pre-release segment invalid");
+    }
+    {
+        // Multiple long segments in pre-release
+        String multiLong = "1.0.0-alpha.";
+        for(int i = 0; i < 50; i++) multiLong += "b";
+        multiLong += ".beta.";
+        for(int i = 0; i < 50; i++) multiLong += "c";
+        SemVer v(multiLong.c_str());
+        assert(!v.isValid(), "Multiple overly long pre-release segments invalid");
+    }
+    {
+        // Long build metadata with dots
+        String longBuild = "1.0.0+build.";
+        for(int i = 0; i < 100; i++) longBuild += "1";
+        SemVer v(longBuild.c_str());
+        assert(!v.isValid(), "Overly long build metadata segment invalid");
+    }
+
+    // --- Extended Satisfies() Pre-release Tests ---
+    std::cout << "\n--- Extended Satisfies() Pre-release Tests ---" << std::endl;
+    {
+        SemVer req("1.0.0-alpha");
+        SemVer cand("1.1.0-beta");
+        assert(!cand.satisfies(req), "Higher tuple pre-release does NOT satisfy lower pre-release req");
+    }
+    {
+        SemVer req("1.0.0-beta");
+        SemVer cand("1.0.0-alpha");
+        assert(!cand.satisfies(req), "Lower precedence pre-release does NOT satisfy higher req");
+    }
+    {
+        SemVer req("1.0.0-alpha");
+        SemVer cand("1.0.0-beta");
+        assert(cand.satisfies(req, true), "Higher precedence pre-release satisfies with includePrerelease=true");
+    }
+    {
+        SemVer req("1.0.0");
+        SemVer cand("0.9.0-rc");
+        assert(!cand.satisfies(req), "Lower major pre-release does NOT satisfy stable req");
+    }
+
+    // --- Extended max() and min() Tests ---
+    std::cout << "\n--- Extended max() and min() Tests ---" << std::endl;
+    {
+        SemVer v1("invalid1");
+        SemVer v2("invalid2");
+        SemVer maxRes = SemVer::maximum(v1, v2);
+        assert(!maxRes.isValid(), "max(invalid, invalid) returns invalid");
+        SemVer minRes = SemVer::minimum(v1, v2);
+        assert(!minRes.isValid(), "min(invalid, invalid) returns invalid");
+    }
+    {
+        SemVer v1("1.0.0");
+        SemVer v2("invalid");
+        SemVer maxRes = SemVer::maximum(v1, v2);
+        assertString(maxRes.toString(), "1.0.0", "max(valid, invalid) returns valid");
+        SemVer minRes = SemVer::minimum(v1, v2);
+        assertString(minRes.toString(), "1.0.0", "min(valid, invalid) returns valid");
+    }
+    {
+        SemVer v1("invalid");
+        SemVer v2("1.0.0");
+        SemVer maxRes = SemVer::maximum(v1, v2);
+        assertString(maxRes.toString(), "1.0.0", "max(invalid, valid) returns valid");
+    }
+
+    // --- Idempotency and Edge Minimal Tests ---
+    std::cout << "\n--- Idempotency and Edge Minimal Tests ---" << std::endl;
+    {
+        SemVer v("0.0.0");
+        assert(v.isValid(), "Minimal version 0.0.0 valid");
+        String str = v.toString();
+        SemVer v2(str.c_str());
+        assert(v2.isValid(), "toString() idempotent for 0.0.0");
+        assert(v == v2, "Versions equal after toString()");
+    }
+    {
+        SemVer v("1.0.0-");
+        assert(!v.isValid(), "Empty pre-release invalid");
+    }
+    {
+        SemVer v("1.0.0+");
+        assert(!v.isValid(), "Empty build metadata invalid");
+    }
+
+    // --- Malicious Comparison Tests ---
+    std::cout << "\n--- Malicious Comparison Tests ---" << std::endl;
+    {
+        SemVer v1("invalid");
+        SemVer v2("1.0.0");
+        assert(!(v1 < v2), "Invalid < valid returns false");
+        assert(!(v1 > v2), "Invalid > valid returns false");
+        assert(!(v1 == v2), "Invalid == valid returns false");
+    }
+    {
+        SemVer v1("invalid1");
+        SemVer v2("invalid2");
+        assert(!(v1 < v2), "Invalid < invalid returns false");
+    }
+
     // --- Summary ---
     std::cout << "\n==================================" << std::endl;
     std::cout << "Tests Passed: " << testsPassed << std::endl;
