@@ -287,8 +287,7 @@ The project includes comprehensive unit tests covering:
 
 ```bash
 # Using g++ (Linux/macOS)
-cd tests
-g++ -DARDUINO=100 -Itests -Isrc run_tests.cpp -o run_tests && ./run_tests
+g++ -DARDUINO=100 -Itests -Isrc tests/run_tests.cpp -o tests/run_tests && ./tests/run_tests
 
 # Or via WSL on Windows
 wsl -e bash -c "g++ -DARDUINO=100 -Itests -Isrc tests/run_tests.cpp -o tests/run_tests && ./tests/run_tests"
