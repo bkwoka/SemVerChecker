@@ -827,11 +827,45 @@ int main() {
         assert(!(v1 < v2), "Invalid < valid returns false");
         assert(!(v1 > v2), "Invalid > valid returns false");
         assert(!(v1 == v2), "Invalid == valid returns false");
+        assert(v1 != v2, "Invalid != valid returns true");
     }
     {
         SemVer v1("invalid1");
         SemVer v2("invalid2");
         assert(!(v1 < v2), "Invalid < invalid returns false");
+        assert(!(v1 <= v2), "Invalid <= invalid returns true (logical false due to validity check)");
+        assert(!(v1 >= v2), "Invalid >= invalid returns true (logical false due to validity check)");
+    }
+
+    // --- Buffer & NULL Tests (Coverage) ---
+    std::cout << "\n--- Buffer & NULL Tests ---" << std::endl;
+    {
+        SemVer v("1.2.3");
+        char smallBuf[4];
+        v.toString(smallBuf, 4);
+        assertString(smallBuf, "1.2", "toString with small buffer (trimmed)");
+        
+        SemVer inv("invalid");
+        inv.toString(smallBuf, 4);
+        assertString(smallBuf, "inv", "toString invalid with small buffer (trimmed)");
+        
+        // Test NULL/0 len (should not crash)
+        v.toString(NULL, 10);
+        v.toString(smallBuf, 0);
+    }
+    {
+        // Arduino String constructor direct test
+        String s("1.2.3");
+        SemVer v(s);
+        assert(v.isValid(), "SemVer(String) constructor works");
+        assert(SemVer::isUpgrade(String("1.0.0"), String("1.1.0")), "isUpgrade(String, String) works");
+    }
+    {
+        // Default constructor Check
+        SemVer v;
+        assert(!v.isValid(), "Default constructor is invalid");
+        assertString(v.getPrerelease(), "", "Default prerelease is empty");
+        assertString(v.getBuild(), "", "Default build is empty");
     }
 
     // --- Summary ---

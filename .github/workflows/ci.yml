@@ -12,10 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Run Native Tests
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov
+
+      - name: Run Native Tests with Coverage
         run: |
-          cd tests
-          make test
+          g++ -Isrc -Itests --coverage -fprofile-arcs -ftest-coverage -DARDUINO -std=c++11 -o tests/run_tests tests/run_tests.cpp
+          ./tests/run_tests
+          lcov --capture --directory tests --output-file coverage.info --ignore-errors empty
+          lcov --remove coverage.info '*/tests/*' '*/Arduino.h' '/usr/*' --output-file coverage.info --ignore-errors unused
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+          file: coverage.info
 
   build-arduino:
     runs-on: ubuntu-latest

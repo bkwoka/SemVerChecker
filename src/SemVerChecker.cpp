@@ -2,21 +2,18 @@
 
 
 size_t SemVer::custom_strlen(const char* s) {
-    if (!s) return 0;
     size_t len = 0;
     while (s[len]) len++;
     return len;
 }
 
 size_t SemVer::custom_strnlen(const char* s, size_t max_len) {
-    if (!s) return 0;
     size_t len = 0;
     while (len < max_len && s[len]) len++;
     return len;
 }
 
 int SemVer::custom_strcmp(const char* s1, const char* s2) {
-    if (!s1 || !s2) return (s1 == s2) ? 0 : (s1 ? 1 : -1);
     while (*s1 && (*s1 == *s2)) {
         s1++;
         s2++;
@@ -34,7 +31,6 @@ char* SemVer::custom_strncpy(char* dest, const char* src, size_t n) {
 }
 
 int SemVer::findChar(const char* s, char c, int start) {
-    if (!s) return -1;
     for (int i = start; s[i] != '\0'; i++) {
         if (s[i] == c) return i;
     }
@@ -401,10 +397,12 @@ bool SemVer::operator>(const SemVer& other) const {
 }
 
 bool SemVer::operator<=(const SemVer& other) const {
+    if (!_valid || !other._valid) return false;
     return !(*this > other);
 }
 
 bool SemVer::operator>=(const SemVer& other) const {
+    if (!_valid || !other._valid) return false;
     return !(*this < other);
 }
 
