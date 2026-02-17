@@ -1,10 +1,11 @@
 # SemVerChecker
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/bkwoka/SemVerChecker)](https://github.com/bkwoka/SemVerChecker/releases)
+[![Build Status](https://github.com/bkwoka/SemVerChecker/actions/workflows/ci.yml/badge.svg)](https://github.com/bkwoka/SemVerChecker/actions)
+[![Coverage Status](https://coveralls.io/repos/github/bkwoka/SemVerChecker/badge.svg?branch=main)](https://coveralls.io/github/bkwoka/SemVerChecker?branch=main)
 [![Arduino Library Registry](https://img.shields.io/badge/Arduino_Library-SemVerChecker-teal.svg)](https://www.arduino.cc/reference/en/libraries/semverchecker/)
 [![PlatformIO Registry](https://img.shields.io/badge/PlatformIO-SemVerChecker-orange?logo=platformio)](https://registry.platformio.org/libraries/bkwoka/SemVerChecker)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Coverage Status](https://coveralls.io/repos/github/bkwoka/SemVerChecker/badge.svg?branch=main)](https://coveralls.io/github/bkwoka/SemVerChecker?branch=main)
 
 A lightweight Semantic Versioning (SemVer 2.0.0) parser and checker for any platform with C++11 support (Arduino, ESP, etc.) featuring a zero-allocation architecture.
 
